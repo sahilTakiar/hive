@@ -3166,7 +3166,14 @@ public class HiveConf extends Configuration {
             "Comma-separated list of supported blobstore schemes."),
 
     HIVE_BLOBSTORE_USE_BLOBSTORE_AS_SCRATCHDIR("hive.blobstore.use.blobstore.as.scratchdir", false,
-            "Enable the use of scratch directories directly on blob storage systems (it may cause performance penalties).");
+            "Enable the use of scratch directories directly on blob storage systems (it may cause performance penalties)."),
+
+    HIVE_BLOBSTORE_PARALLEL_DIRECTORY_RENAME("hive.blobstore.parallel.directory.rename", true,
+            "When renaming directories within a blobstore, rename files one at a time rather than at at directory level. " +
+            "Since renames may require copying the entire file, each rename can take a long amount of time. Renaming at " +
+            "a directory level may not be ideal if the blobstore connector cannot efficiently rename a directory " +
+            "(e.g. HADOOP-13600). By default, renames are done using a thread pool which allows each individual file " +
+            "to be renamed in parallel.");
 
 
     public final String varname;

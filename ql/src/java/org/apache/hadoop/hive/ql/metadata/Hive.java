@@ -136,6 +136,7 @@ import org.apache.hadoop.hive.ql.plan.DropTableDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeGenericFuncDesc;
 import org.apache.hadoop.hive.ql.session.CreateTableAutomaticGrant;
 import org.apache.hadoop.hive.ql.session.SessionState;
+import org.apache.hadoop.hive.ql.util.BlobStorageUtils;
 import org.apache.hadoop.hive.serde2.Deserializer;
 import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe;
@@ -3001,6 +3002,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
     //needed for perm inheritance.
     final boolean inheritPerms = HiveConf.getBoolVar(conf,
         HiveConf.ConfVars.HIVE_WAREHOUSE_SUBDIR_INHERIT_PERMS);
+    final boolean shouldRenameDirectoryInParallel = BlobStorageUtils.shouldRenameDirectoryInParallel(conf, destFs);
     HdfsUtils.HadoopFileStatus destStatus = null;
 
     // If source path is a subdirectory of the destination path:
@@ -3053,6 +3055,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
               conf);
         } else {
           if (destIsSubDir) {
+
             FileStatus[] srcs = destFs.listStatus(srcf, FileUtils.HIDDEN_FILES_PATH_FILTER);
 
             List<Future<Void>> futures = new LinkedList<>();
@@ -3105,13 +3108,21 @@ private void constructOneLBLocationMap(FileStatus fSta,
             }
             return true;
           } else {
-            if (destFs.rename(srcf, destf)) {
-              if (inheritPerms) {
-                HdfsUtils.setFullFileStatus(conf, destStatus, destFs, destf, true);
-              }
+            if (shouldRenameDirectoryInParallel && conf.getInt(ConfVars.HIVE_MOVE_FILES_THREAD_COUNT.varname, 25) > 0) {
+              final ExecutorService pool = Executors.newFixedThreadPool(
+                      conf.getInt(ConfVars.HIVE_MOVE_FILES_THREAD_COUNT.varname, 25),
+                      new ThreadFactoryBuilder().setDaemon(true).setNameFormat("Move-Thread-%d").build());
+              BlobStorageUtils.renameDirectoryInParallel(conf, srcFs, destFs, srcf, destf, inheritPerms, pool);
               return true;
+            } else {
+              if (destFs.rename(srcf, destf)) {
+                if (inheritPerms) {
+                  HdfsUtils.setFullFileStatus(conf, destStatus, destFs, destf, true);
+                }
+                return true;
+              }
+              return false;
             }
-            return false;
           }
         }
       }
