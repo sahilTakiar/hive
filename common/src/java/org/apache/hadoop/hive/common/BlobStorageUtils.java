@@ -24,10 +24,12 @@ import org.apache.hadoop.hive.conf.HiveConf;
 
 import java.util.Collection;
 
+
 /**
  * Utilities for different blob (object) storage systems
  */
 public class BlobStorageUtils {
+
     private static final boolean DISABLE_BLOBSTORAGE_AS_SCRATCHDIR = false;
 
     public static boolean isBlobStoragePath(final Configuration conf, final Path path) {
@@ -35,7 +37,7 @@ public class BlobStorageUtils {
     }
 
     public static boolean isBlobStorageFileSystem(final Configuration conf, final FileSystem fs) {
-        return (fs == null) ? false : isBlobStorageScheme(conf, fs.getScheme());
+        return (fs == null) ? false : isBlobStorageScheme(conf, fs.getUri().getScheme());
     }
 
     public static boolean isBlobStorageScheme(final Configuration conf, final String scheme) {
@@ -50,5 +52,14 @@ public class BlobStorageUtils {
                 HiveConf.ConfVars.HIVE_BLOBSTORE_USE_BLOBSTORE_AS_SCRATCHDIR.varname,
                 DISABLE_BLOBSTORAGE_AS_SCRATCHDIR
         );
+    }
+
+    /**
+     * Returns true if a directory should be renamed in parallel, false otherwise.
+     */
+    public static boolean shouldRenameDirectoryInParallel(final Configuration conf, final FileSystem fs) {
+        return HiveConf.getBoolVar(conf,
+                HiveConf.ConfVars.HIVE_BLOBSTORE_PARALLEL_DIRECTORY_RENAME) && BlobStorageUtils.isBlobStorageFileSystem(
+                fs.getConf(), fs);
     }
 }
