@@ -3173,8 +3173,15 @@ public class HiveConf extends Configuration {
             "Since renames may require copying the entire file, each rename can take a long amount of time. Renaming at " +
             "a directory level may not be ideal if the blobstore connector cannot efficiently rename a directory " +
             "(e.g. HADOOP-13600). By default, renames are done using a thread pool which allows each individual file " +
-            "to be renamed in parallel. The size of the threadpool is controlled by the hive.mv.files.thread parameter.");
+            "to be renamed in parallel. The size of the threadpool is controlled by the hive.mv.files.thread parameter."),
 
+    HIVE_BLOBSTORE_WRITE_FINAL_OUTPUT_TO_BLOBSTORE("hive.blobstore.write.final.output.to.blobstore", true,
+            "If hive.blobstore.use.blobstore.as.scratchdir is false, force the last Hive job to write to the blobstore. " +
+            "This is a performance optimization that forces the final FileSinkOperator to write to the blobstore. " +
+            "The advantage is that any copying of data that needs to be done from the scratch directory to the final " +
+            "table directory can be server-side, within the blobstore. The MoveTask simply renames data from the " +
+            "scratch directory to the final table location, which should translate to a server-side COPY request. " +
+            "This way HiveServer2 doesn't have to actually copy any data, it just tells the blobstore to do all the work");
 
     public final String varname;
     private final String altName;

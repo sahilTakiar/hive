@@ -61,5 +61,15 @@ public class BlobStorageUtils {
         return HiveConf.getBoolVar(conf,
                 HiveConf.ConfVars.HIVE_BLOBSTORE_PARALLEL_DIRECTORY_RENAME) && BlobStorageUtils.isBlobStorageFileSystem(
                 fs.getConf(), fs);
+     }
+
+    /**
+     * Returns true if the output of the final MR / Spark / Tez Job should be written to a blobstore. All intermediate
+     * data will be written to the default fs, and only the final job will write to the blobstore. This has the advantage
+     * that all intermediate data can be stored on HDFS or the local fs, and only the final output gets written to the
+     * blobstore.
+     */
+    public static boolean shouldWriteFinalOutputToBlobstore(final Configuration conf) {
+        return HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVE_BLOBSTORE_WRITE_FINAL_OUTPUT_TO_BLOBSTORE);
     }
 }

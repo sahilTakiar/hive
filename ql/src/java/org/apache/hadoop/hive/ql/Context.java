@@ -347,16 +347,20 @@ public class Context {
 
   /**
    * Create a temporary directory depending of the path specified.
-   * - If path is an Object store filesystem, then use the default MR scratch directory (HDFS)
+   * - If path is an Object store filesystem, then use the default MR scratch directory (HDFS), unless isFinalJob and
+   * {@link BlobStorageUtils#shouldWriteFinalOutputToBlobstore(Configuration)} are both true, then return a path on
+   * the blobstore.
    * - If path is on HDFS, then create a staging directory inside the path
    *
    * @param path Path used to verify the Filesystem to use for temporary directory
+   * @param isFinalJob true if the required {@link Path} will be used for the final job (e.g. the final FSOP)
+   *
    * @return A path to the new temporary directory
-     */
-  public Path getTempDirForPath(Path path) {
+   */
+  public Path getTempDirForPath(Path path, boolean isFinalJob) {
     boolean isLocal = isPathLocal(path);
-    if ((BlobStorageUtils.isBlobStoragePath(conf, path) && !BlobStorageUtils.isBlobStorageAsScratchDir(conf))
-        || isLocal) {
+    if (((BlobStorageUtils.isBlobStoragePath(conf, path) && !BlobStorageUtils.isBlobStorageAsScratchDir(conf))
+            || isLocal) && !(isFinalJob && BlobStorageUtils.shouldWriteFinalOutputToBlobstore(conf))) {
       // For better write performance, we use HDFS for temporary data when object store is used.
       // Note that the scratch directory configuration variable must use HDFS or any other non-blobstorage system
       // to take advantage of this performance.
@@ -364,6 +368,19 @@ public class Context {
     } else {
       return getExtTmpPathRelTo(path);
     }
+  }
+
+
+  /**
+   * Create a temporary directory depending of the path specified.
+   * - If path is an Object store filesystem, then use the default MR scratch directory (HDFS)
+   * - If path is on HDFS, then create a staging directory inside the path
+   *
+   * @param path Path used to verify the Filesystem to use for temporary directory
+   * @return A path to the new temporary directory
+   */
+  public Path getTempDirForPath(Path path) {
+    return getTempDirForPath(path, false);
   }
 
   /*
