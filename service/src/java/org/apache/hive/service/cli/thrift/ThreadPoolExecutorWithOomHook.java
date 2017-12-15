@@ -23,7 +23,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-final class ThreadPoolExecutorWithOomHook extends ThreadPoolExecutor {
+public final class ThreadPoolExecutorWithOomHook extends ThreadPoolExecutor {
   private final Runnable oomHook;
 
   public ThreadPoolExecutorWithOomHook(int corePoolSize, int maximumPoolSize, long keepAliveTime,

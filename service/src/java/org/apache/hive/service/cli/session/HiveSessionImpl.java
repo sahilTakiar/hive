@@ -18,21 +18,7 @@
 
 package org.apache.hive.service.cli.session;
 
-import java.util.Collections;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.Semaphore;
+import com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hive.common.cli.HiveFileProcessor;
@@ -74,13 +60,29 @@ import org.apache.hive.service.cli.operation.GetTypeInfoOperation;
 import org.apache.hive.service.cli.operation.MetadataOperation;
 import org.apache.hive.service.cli.operation.Operation;
 import org.apache.hive.service.cli.operation.OperationManager;
+import org.apache.hive.service.cli.operation.SQLOperation;
+import org.apache.hive.service.container.ContainerLauncher;
+import org.apache.hive.service.container.ContainerLauncherFactory;
 import org.apache.hive.service.rpc.thrift.TProtocolVersion;
 import org.apache.hive.service.server.KillQueryImpl;
 import org.apache.hive.service.server.ThreadWithGarbageCleanup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Lists;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.Semaphore;
 
 /**
  * HiveSession
@@ -120,7 +122,7 @@ public class HiveSessionImpl implements HiveSession {
   private volatile long lastAccessTime = System.currentTimeMillis();
   private volatile boolean lockedByUser;
   private final Semaphore operationLock;
-
+  private ContainerLauncher containerLauncher;
 
   public HiveSessionImpl(SessionHandle sessionHandle, TProtocolVersion protocol,
     String username, String password, HiveConf serverConf, String ipAddress,
@@ -538,7 +540,20 @@ public class HiveSessionImpl implements HiveSession {
           confOverlay, runAsync, queryTimeout);
       opHandle = operation.getHandle();
       addOpHandle(opHandle);
-      operation.run();
+
+      if (operation instanceof SQLOperation && containerLauncher == null) {
+        // Create the remote container here
+        containerLauncher = ContainerLauncherFactory.getContainerLauncher(getHiveConf());
+        try {
+          if (containerLauncher != null) {
+            containerLauncher.launch();
+          }
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      } else {
+        operation.run();
+      }
       return opHandle;
     } catch (HiveSQLException e) {
       // Refering to SQLOperation.java, there is no chance that a HiveSQLException throws and the
