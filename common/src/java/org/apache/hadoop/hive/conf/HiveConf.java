@@ -4235,6 +4235,11 @@ public class HiveConf extends Configuration {
             "If a Spark job contains more tasks than the maximum, it will be cancelled. A value of -1 means no limit."),
     SPARK_STAGE_MAX_TASKS("hive.spark.stage.max.tasks", -1, "The maximum number of tasks a stage in a Spark job may have.\n" +
         "If a Spark job stage contains more tasks than the maximum, the job will be cancelled. A value of -1 means no limit."),
+    SPARK_CLIENT_TYPE("hive.spark.client.type", SparkClientType.SPARK_SUBMIT_CLIENT.toString(),
+        "Controls how the Spark application is launched. If " + SparkClientType.SPARK_SUBMIT_CLIENT +
+        " is specified (default) then the spark-submit shell script is used to launch the Spark " +
+        "app. If " +  SparkClientType.SPARK_LAUNCHER_CLIENT + " is specified then Spark's " +
+        "SparkLauncher is used to programmatically launch the app."),
     NWAYJOINREORDER("hive.reorder.nway.joins", true,
       "Runs reordering of tables within single n-way join (i.e.: picks streamtable)"),
     HIVE_MERGE_NWAY_JOINS("hive.merge.nway.joins", true,
@@ -5793,4 +5798,12 @@ public class HiveConf extends Configuration {
     return ret;
   }
 
+  /**
+   * The type of launcher to use when submitting the HoS application. Used in
+   * {@link ConfVars#SPARK_CLIENT_TYPE}.
+   */
+  public enum SparkClientType {
+    SPARK_SUBMIT_CLIENT,
+    SPARK_LAUNCHER_CLIENT
+  }
 }
