@@ -96,6 +96,8 @@ public class RemoteDriver {
     this.shutdownLock = new Object();
     localTmpDir = Files.createTempDir();
 
+    addShutdownHook();
+
     SparkConf conf = new SparkConf();
     String serverAddress = null;
     int serverPort = -1;
@@ -178,6 +180,17 @@ public class RemoteDriver {
     }
   }
 
+  private void addShutdownHook() {
+    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+      if (running) {
+        LOG.info("Received signal SIGTERM, attempting safe shutdown of Remote Spark Context");
+        protocol.sendErrorMessage("Remote Spark Context was shutdown because it received a SIGTERM " +
+                "signal. Most likely due to a kill request via YARN.");
+        shutdown(null);
+      }
+    }));
+  }
+
   private void run() throws InterruptedException {
     synchronized (shutdownLock) {
       while (running) {
@@ -249,7 +262,12 @@ public class RemoteDriver {
 
     void sendError(Throwable error) {
       LOG.debug("Send error to Client: {}", Throwables.getStackTraceAsString(error));
-      clientRpc.call(new Error(error));
+      clientRpc.call(new Error(Throwables.getStackTraceAsString(error)));
+    }
+
+    void sendErrorMessage(String cause) {
+      LOG.debug("Send error to Client: {}", cause);
+      clientRpc.call(new Error(cause));
     }
 
     <T extends Serializable> void jobFinished(String jobId, T result,
