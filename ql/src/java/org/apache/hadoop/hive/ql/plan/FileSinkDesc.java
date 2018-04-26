@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hive.ql.plan;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -28,6 +29,9 @@ import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.optimizer.signature.Signature;
 import org.apache.hadoop.hive.ql.plan.Explain.Level;
 import org.apache.hadoop.hive.ql.plan.Explain.Vectorization;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
+import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 
 /**
  * FileSinkDesc.
@@ -63,6 +67,8 @@ public class FileSinkDesc extends AbstractOperatorDesc implements IStatsGatherDe
   private DynamicPartitionCtx dpCtx;
   private String staticSpec; // static partition spec ends with a '/'
   private boolean gatherStats;
+  private String targetDirName;
+  private boolean hasOutputCommitter;
 
   // Consider a query like:
   // insert overwrite table T3 select ... from T1 join T2 on T1.key = T2.key;
@@ -583,6 +589,14 @@ public class FileSinkDesc extends AbstractOperatorDesc implements IStatsGatherDe
     return isInsertOverwrite;
   }
 
+  public String getTargetDirName() {
+    return this.targetDirName;
+  }
+
+  public void setTargetDirName(String targetDirName) {
+    this.targetDirName = targetDirName;
+  }
+
   @Override
   public boolean isSame(OperatorDesc other) {
     if (getClass().getName().equals(other.getClass().getName())) {
@@ -601,4 +615,11 @@ public class FileSinkDesc extends AbstractOperatorDesc implements IStatsGatherDe
     return false;
   }
 
+  public void setHasOutputCommitter(boolean hasOutputCommitter) {
+    this.hasOutputCommitter = hasOutputCommitter;
+  }
+
+  public boolean getHasOutputCommitter() {
+    return this.hasOutputCommitter;
+  }
 }

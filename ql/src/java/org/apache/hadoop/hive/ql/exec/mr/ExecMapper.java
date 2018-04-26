@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.mapred.TaskAttemptID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -73,6 +74,8 @@ public class ExecMapper extends MapReduceBase implements Mapper {
 
   @Override
   public void configure(JobConf job) {
+    TaskAttemptID taskAttemptID = TaskAttemptID.forName(job.get("mapred.task.id"));
+
     execContext = new ExecMapperContext(job);
     // Allocate the bean at the beginning -
       try {
@@ -110,6 +113,7 @@ public class ExecMapper extends MapReduceBase implements Mapper {
       execContext.setLocalWork(localWork);
 
       MapredContext.init(true, new JobConf(jc));
+      MapredContext.get().setTaskAttemptID(taskAttemptID);
 
       mo.passExecContext(execContext);
       mo.initializeLocalWork(jc);
