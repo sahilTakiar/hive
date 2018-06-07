@@ -63,6 +63,7 @@ import org.apache.hadoop.hive.metastore.api.ColumnStatisticsObj;
 import org.apache.hadoop.hive.metastore.cache.CachedStore;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.metastore.utils.MetaStoreUtils;
+import org.apache.hadoop.hive.ql.ContainerServiceClient;
 import org.apache.hadoop.hive.ql.MapRedStats;
 import org.apache.hadoop.hive.ql.exec.FunctionInfo;
 import org.apache.hadoop.hive.ql.exec.Registry;
@@ -312,6 +313,16 @@ public class SessionState {
   private String atsDomainId;
 
   private List<Closeable> cleanupItems = new LinkedList<Closeable>();
+
+  private ContainerServiceClient containerServiceClient;
+
+  public ContainerServiceClient getContainerServiceClient() {
+    return this.containerServiceClient;
+  }
+
+  public void setContainerServiceClient(ContainerServiceClient containerServiceClient) {
+    this.containerServiceClient = containerServiceClient;
+  }
 
   public HiveConf getConf() {
     return sessionConf;

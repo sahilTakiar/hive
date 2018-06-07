@@ -25,6 +25,9 @@ import org.apache.hadoop.hive.ql.exec.spark.status.SparkJobRef;
 import org.apache.hadoop.hive.ql.plan.SparkWork;
 import org.apache.spark.SparkConf;
 
+/**
+ * Responsible for submitting work for Spark to run
+ */
 public interface HiveSparkClient extends Serializable, Closeable {
   /**
    * HiveSparkClient should generate Spark RDD graph by given sparkWork and driverContext,
@@ -36,19 +39,5 @@ public interface HiveSparkClient extends Serializable, Closeable {
    */
   SparkJobRef execute(DriverContext driverContext, SparkWork sparkWork) throws Exception;
 
-  /**
-   * @return spark configuration
-   */
-  SparkConf getSparkConf();
-
-  /**
-   * @return the number of executors
-   */
-  int getExecutorCount() throws Exception;
-
-  /**
-   * For standalone mode, this can be used to get total number of cores.
-   * @return  default parallelism.
-   */
-  int getDefaultParallelism() throws Exception;
+  void execute(String statement);
 }

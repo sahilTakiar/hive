@@ -28,9 +28,9 @@ import org.apache.hive.spark.counter.SparkCounters;
 import org.apache.spark.api.java.JavaFutureAction;
 import org.apache.spark.api.java.JavaSparkContext;
 
-class JobContextImpl implements JobContext {
+public class JobContextImpl implements JobContext {
 
-  private final JavaSparkContext sc;
+  public final JavaSparkContext sc;
   private final ThreadLocal<MonitorCallback> monitorCb;
   private final Map<String, List<JavaFutureAction<?>>> monitoredJobs;
   private final Map<String, Long> addedJars;

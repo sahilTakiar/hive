@@ -946,6 +946,21 @@
                   <include>org.apache.orc:orc-shims</include>
                   <include>org.apache.orc:orc-tools</include>
                   <include>joda-time:joda-time</include>
+                  <include>org.apache.logging.log4j:log4j-api</include>
+                  <include>org.apache.calcite.avatica:avatica</include>
+                  <include>org.apache.calcite:calcite-core</include>
+                  <include>org.apache.calcite:calcite-linq4j</include>
+                  <include>org.apache.calcite:calcite-druid</include>
+                  <include>org.apache.thrift:libfb303</include>
+                  <include>org.datanucleus:datanucleus-core</include>
+                  <include>org.datanucleus:datanucleus-api-jdo</include>
+                  <include>org.datanucleus:datanucleus-rdbms</include>
+                  <include>org.datanucleus:javax.jdo</include>
+                  <include>commons-pool:commons-pool</include>
+                  <include>commons-dbcp:commons-dbcp</include>
+                  <include>org.antlr:antlr-runtime</include>
+                  <include>javax.jdo:jdo-api</include>
+                  <include>org.apache.hbase:hbase-common</include>
                 </includes>
               </artifactSet>
               <relocations>

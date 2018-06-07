@@ -630,7 +630,7 @@ public class Driver implements IDriver {
       // query running in this same thread.  This has to be done after we get our semantic
       // analyzer (this is when the connection to the metastore is made) but before we analyze,
       // because at that point we need access to the objects.
-      Hive.get().getMSC().flushCache();
+      //Hive.get().getMSC().flushCache();
 
       backupContext = new Context(ctx);
       boolean executeHooks = hookRunner.hasPreAnalyzeHooks();
@@ -760,7 +760,7 @@ public class Driver implements IDriver {
 
       double duration = perfLogger.PerfLogEnd(CLASS_NAME, PerfLogger.COMPILE)/1000.00;
       ImmutableMap<String, Long> compileHMSTimings = dumpMetaCallTimingWithoutEx("compilation");
-      queryDisplay.setHmsTimings(QueryDisplay.Phase.COMPILATION, compileHMSTimings);
+      // queryDisplay.setHmsTimings(QueryDisplay.Phase.COMPILATION, compileHMSTimings);
 
       boolean isInterrupted = lDrvState.isAborted();
       if (isInterrupted && !deferClose) {
@@ -979,11 +979,11 @@ public class Driver implements IDriver {
   }
 
   private ImmutableMap<String, Long> dumpMetaCallTimingWithoutEx(String phase) {
-    try {
-      return Hive.get().dumpAndClearMetaCallTiming(phase);
-    } catch (HiveException he) {
-      LOG.warn("Caught exception attempting to write metadata call information " + he, he);
-    }
+//    try {
+//      return Hive.get().dumpAndClearMetaCallTiming(phase);
+//    } catch (HiveException he) {
+//      LOG.warn("Caught exception attempting to write metadata call information " + he, he);
+//    }
     return null;
   }
 
@@ -2500,7 +2500,7 @@ public class Driver implements IDriver {
       double duration = perfLogger.PerfLogEnd(CLASS_NAME, PerfLogger.DRIVER_EXECUTE)/1000.00;
 
       ImmutableMap<String, Long> executionHMSTimings = dumpMetaCallTimingWithoutEx("execution");
-      queryDisplay.setHmsTimings(QueryDisplay.Phase.EXECUTION, executionHMSTimings);
+      // queryDisplay.setHmsTimings(QueryDisplay.Phase.EXECUTION, executionHMSTimings);
 
       Map<String, MapRedStats> stats = SessionState.get().getMapRedStats();
       if (stats != null && !stats.isEmpty()) {

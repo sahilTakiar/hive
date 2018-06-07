@@ -62,64 +62,24 @@ import com.google.common.base.Strings;
  * environment and execute spark work.
  */
 public class LocalHiveSparkClient implements HiveSparkClient {
-  private static final long serialVersionUID = 1L;
 
   private static final String MR_JAR_PROPERTY = "tmpjars";
-  protected static final transient Logger LOG = LoggerFactory
-      .getLogger(LocalHiveSparkClient.class);
-
   private static final Splitter CSV_SPLITTER = Splitter.on(",").omitEmptyStrings();
-
-  private static LocalHiveSparkClient client;
-
-  public static synchronized LocalHiveSparkClient getInstance(
-      SparkConf sparkConf, HiveConf hiveConf) throws FileNotFoundException, MalformedURLException {
-    if (client == null) {
-      client = new LocalHiveSparkClient(sparkConf, hiveConf);
-    }
-    return client;
-  }
-
-  private final JavaSparkContext sc;
-
   private final List<String> localJars = new ArrayList<String>();
 
   private final List<String> localFiles = new ArrayList<String>();
 
+  private final JavaSparkContext sc;
+
   private final JobMetricsListener jobMetricsListener;
 
-  private LocalHiveSparkClient(SparkConf sparkConf, HiveConf hiveConf)
-      throws FileNotFoundException, MalformedURLException {
-    String regJar = null;
-    // the registrator jar should already be in CP when not in test mode
-    if (HiveConf.getBoolVar(hiveConf, HiveConf.ConfVars.HIVE_IN_TEST)) {
-      String kryoReg = sparkConf.get("spark.kryo.registrator", "");
-      if (SparkClientUtilities.HIVE_KRYO_REG_NAME.equals(kryoReg)) {
-        regJar = SparkClientUtilities.findKryoRegistratorJar(hiveConf);
-        SparkClientUtilities.addJarToContextLoader(new File(regJar));
-      }
-    }
-    sc = new JavaSparkContext(sparkConf);
-    if (regJar != null) {
-      sc.addJar(regJar);
-    }
-    jobMetricsListener = new JobMetricsListener();
-    sc.sc().addSparkListener(jobMetricsListener);
+  public LocalHiveSparkClient(LocalHiveSparkAppClient sparkAppClient) {
+    this(sparkAppClient.getSc(), sparkAppClient.getJobMetricsListener());
   }
 
-  @Override
-  public SparkConf getSparkConf() {
-    return sc.sc().conf();
-  }
-
-  @Override
-  public int getExecutorCount() {
-    return sc.sc().getExecutorMemoryStatus().size();
-  }
-
-  @Override
-  public int getDefaultParallelism() throws Exception {
-    return sc.sc().defaultParallelism();
+  public LocalHiveSparkClient(JavaSparkContext sc, JobMetricsListener jobMetricsListener) {
+    this.sc = sc;
+    this.jobMetricsListener = jobMetricsListener;
   }
 
   @Override
@@ -152,8 +112,8 @@ public class LocalHiveSparkClient implements HiveSparkClient {
     SparkReporter sparkReporter = new SparkReporter(sparkCounters);
 
     // Generate Spark plan
-    SparkPlanGenerator gen =
-      new SparkPlanGenerator(sc, ctx, jobConf, emptyScratchDir, sparkReporter);
+    SparkPlanGenerator gen = new SparkPlanGenerator(sc, ctx, jobConf,
+            emptyScratchDir, sparkReporter);
     SparkPlan plan = gen.generate(sparkWork);
 
     if (driverContext.isShutdown()) {
@@ -173,9 +133,14 @@ public class LocalHiveSparkClient implements HiveSparkClient {
 
     // As we always use foreach action to submit RDD graph, it would only trigger one job.
     int jobId = future.jobIds().get(0);
-    LocalSparkJobStatus sparkJobStatus = new LocalSparkJobStatus(
-      sc, jobId, jobMetricsListener, sparkCounters, plan.getCachedRDDIds(), future);
-    return new LocalSparkJobRef(Integer.toString(jobId), hiveConf,  sparkJobStatus, sc);
+    LocalSparkJobStatus sparkJobStatus = new LocalSparkJobStatus(sc, jobId, jobMetricsListener,
+            sparkCounters, plan.getCachedRDDIds(), future);
+    return new LocalSparkJobRef(Integer.toString(jobId), hiveConf, sparkJobStatus, sc);
+  }
+
+  @Override
+  public void execute(String statement) {
+
   }
 
   /**
@@ -238,11 +203,6 @@ public class LocalHiveSparkClient implements HiveSparkClient {
 
   @Override
   public void close() {
-    synchronized (LocalHiveSparkClient.class) {
-      client = null;
-    }
-    if (sc != null) {
-      sc.stop();
-    }
+    // TODO
   }
 }

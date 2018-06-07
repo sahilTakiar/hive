@@ -18,6 +18,7 @@
 package org.apache.hadoop.hive.ql.exec.spark.session;
 
 import org.apache.hadoop.hive.ql.ErrorMsg;
+import org.apache.hadoop.hive.ql.exec.spark.HiveSparkAppClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hive.conf.HiveConf;
@@ -208,7 +209,7 @@ public class TestSparkSessionManagerImpl {
     SparkSessionImpl sparkSessionImpl = (SparkSessionImpl)
         sessionManager.getSession(null, conf, true);
     assertTrue(sparkSessionImpl.isOpen());
-    HiveSparkClient hiveSparkClient = sparkSessionImpl.getHiveSparkClient();
+    HiveSparkAppClient hiveSparkClient = sparkSessionImpl.getHiveSparkAppClient();
     SparkConf sparkConf = hiveSparkClient.getSparkConf();
     String cloneConfig = sparkConf.get(paramName);
     sessionManager.closeSession(sparkSessionImpl);

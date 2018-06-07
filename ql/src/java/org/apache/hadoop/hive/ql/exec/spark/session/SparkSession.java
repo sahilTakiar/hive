@@ -42,6 +42,8 @@ public interface SparkSession {
    */
   SparkJobRef submit(DriverContext driverContext, SparkWork sparkWork) throws Exception;
 
+  void submit(String statement) throws Exception;
+
   /**
    * Get Spark shuffle memory per task, and total number of cores. This
    * information can be used to estimate how many reducers a task can have.

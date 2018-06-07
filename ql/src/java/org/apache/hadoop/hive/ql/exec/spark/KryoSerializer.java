@@ -24,6 +24,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.apache.commons.io.output.ByteArrayOutputStream;
+import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.exec.SerializationUtilities;
 import org.apache.hadoop.mapred.JobConf;
 import org.slf4j.Logger;
@@ -64,6 +65,25 @@ public class KryoSerializer {
     return result;
   }
 
+  public static byte[] serializeHiveConf(HiveConf jobConf) {
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    try {
+      jobConf.write(new DataOutputStream(out));
+    } catch (IOException e) {
+      LOG.error("Error serializing job configuration: " + e, e);
+      return null;
+    } finally {
+      try {
+        out.close();
+      } catch (IOException e) {
+        LOG.error("Error closing output stream: " + e, e);
+      }
+    }
+
+    return out.toByteArray();
+
+  }
+
   public static byte[] serializeJobConf(JobConf jobConf) {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     try {
@@ -94,4 +114,14 @@ public class KryoSerializer {
     return conf;
   }
 
+  public static HiveConf deserializeHiveConf(byte[] buffer) {
+    HiveConf conf = new HiveConf();
+    try {
+      conf.readFields(new DataInputStream(new ByteArrayInputStream(buffer)));
+    } catch (IOException e) {
+      String msg = "Error de-serializing job configuration: " + e;
+      throw new IllegalStateException(msg, e);
+    }
+    return conf;
+  }
 }

@@ -48,7 +48,7 @@ import org.apache.hadoop.hive.common.classification.InterfaceAudience;
  * </p>
  */
 @InterfaceAudience.Private
-public abstract class RpcDispatcher extends SimpleChannelInboundHandler<Object> {
+public class RpcDispatcher extends SimpleChannelInboundHandler<Object> {
 
   private static final Logger LOG = LoggerFactory.getLogger(RpcDispatcher.class);
 

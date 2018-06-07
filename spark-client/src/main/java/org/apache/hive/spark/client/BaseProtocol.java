@@ -106,12 +106,12 @@ public abstract class BaseProtocol extends RpcDispatcher {
     }
   }
 
-  protected static class JobRequest<T extends Serializable> implements Serializable {
+  public static class JobRequest<T extends Serializable> implements Serializable {
 
     final String id;
     final Job<T> job;
 
-    JobRequest(String id, Job<T> job) {
+    public JobRequest(String id, Job<T> job) {
       this.id = id;
       this.job = job;
     }
@@ -220,6 +220,15 @@ public abstract class BaseProtocol extends RpcDispatcher {
       return "SyncJobRequest{" +
               "job=" + job +
               '}';
+    }
+  }
+
+  protected static class ExecuteStatement implements Serializable {
+
+    final String statement;
+
+    ExecuteStatement(String statement) {
+      this.statement = statement;
     }
   }
 }

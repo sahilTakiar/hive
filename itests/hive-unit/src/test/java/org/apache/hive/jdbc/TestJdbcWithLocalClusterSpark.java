@@ -62,7 +62,7 @@ public class TestJdbcWithLocalClusterSpark {
   private static MiniHS2 miniHS2 = null;
   private static HiveConf conf;
   private static Path dataFilePath;
-  private static String  dbName = "mrTestDb";
+  private static String  dbName = "default";
   private Connection hs2Conn = null;
   private Statement stmt;
 
@@ -79,6 +79,7 @@ public class TestJdbcWithLocalClusterSpark {
     conf.set("dfs.client.datanode-restart.timeout", "30");
     conf.set("spark.local.dir", Paths.get(System.getProperty("test.tmp.dir"),
             "TestJdbcWithLocalClusterSpark-local-dir").toString());
+    //conf.set("hive.server2.enable.container.service", "true");
     return conf;
   }
 
@@ -92,7 +93,7 @@ public class TestJdbcWithLocalClusterSpark {
     dataFilePath = new Path(dataFileDir, "kv1.txt");
     DriverManager.setLoginTimeout(0);
     conf.setBoolVar(ConfVars.HIVE_SUPPORT_CONCURRENCY, false);
-    miniHS2 = new MiniHS2(conf, MiniClusterType.MR);
+    miniHS2 = new MiniHS2.Builder().withMiniMR().withConf(conf).withRemoteMetastore().build();
     Map<String, String> overlayProps = new HashMap<String, String>();
     overlayProps.put(ConfVars.HIVE_SERVER2_SESSION_HOOK.varname,
         LocalClusterSparkSessionHook.class.getName());
@@ -105,8 +106,8 @@ public class TestJdbcWithLocalClusterSpark {
     Connection conn = DriverManager.
         getConnection(miniHS2.getJdbcURL(), System.getProperty("user.name"), "bar");
     Statement stmt2 = conn.createStatement();
-    stmt2.execute("DROP DATABASE IF EXISTS " + dbName + " CASCADE");
-    stmt2.execute("CREATE DATABASE " + dbName);
+//    stmt2.execute("DROP DATABASE IF EXISTS " + dbName + " CASCADE");
+//    stmt2.execute("CREATE DATABASE " + dbName);
     stmt2.close();
     conn.close();
   }
@@ -116,7 +117,7 @@ public class TestJdbcWithLocalClusterSpark {
     hs2Conn = DriverManager.getConnection(miniHS2.getJdbcURL(dbName),
         System.getProperty("user.name"), "bar");
     stmt = hs2Conn.createStatement();
-    stmt.execute("USE " + dbName);
+    //stmt.execute("USE " + dbName);
   }
 
   @After
@@ -167,7 +168,18 @@ public class TestJdbcWithLocalClusterSpark {
     String queryStr = "SELECT * FROM " + tableName
         + " where value = '" + resultVal + "'";
 
-    testKvQuery(tableName, queryStr, resultVal);
+    stmt.execute("CREATE TABLE " + tableName
+        + " (under_col INT COMMENT 'the under column', value STRING)"
+        + " COMMENT ' test table'");
+
+    // load data
+    stmt.execute("load data local inpath '"
+        + dataFilePath.toString() + "' into table " + tableName);
+
+    stmt.execute("set hive.server2.enable.container.service=true");
+    stmt.execute(queryStr);
+
+    //testKvQuery(tableName, queryStr, resultVal);
   }
 
   @Test

@@ -77,7 +77,7 @@ import org.slf4j.LoggerFactory;
  *   It uses this protocol to submit {@link Job}s to the {@link RemoteDriver}.
  * </p>
  */
-abstract class AbstractSparkClient implements SparkClient {
+abstract class AbstractSparkAppClient implements SparkAppClient {
 
   private static final long serialVersionUID = 1L;
 
@@ -100,7 +100,7 @@ abstract class AbstractSparkClient implements SparkClient {
   private final ClientProtocol protocol;
   protected volatile boolean isAlive;
 
-  protected AbstractSparkClient(RpcServer rpcServer, Map<String, String> conf, HiveConf hiveConf,
+  protected AbstractSparkAppClient(RpcServer rpcServer, Map<String, String> conf, HiveConf hiveConf,
                   String sessionid) throws IOException {
     this.conf = conf;
     this.hiveConf = hiveConf;
@@ -155,17 +155,6 @@ abstract class AbstractSparkClient implements SparkClient {
         }
     });
     isAlive = true;
-  }
-
-  @Override
-  public <T extends Serializable> JobHandle<T> submit(Job<T> job) {
-    LOG.info("SUBMITTING JOB");
-    return protocol.submit(job, Collections.<JobHandle.Listener<T>>emptyList());
-  }
-
-  @Override
-  public <T extends Serializable> JobHandle<T> submit(Job<T> job, List<JobHandle.Listener<T>> listeners) {
-    return protocol.submit(job, listeners);
   }
 
   @Override
@@ -425,43 +414,6 @@ abstract class AbstractSparkClient implements SparkClient {
   protected abstract void addExecutorCores(String executorCores);
 
   private class ClientProtocol extends BaseProtocol {
-
-    <T extends Serializable> JobHandleImpl<T> submit(Job<T> job, List<JobHandle.Listener<T>> listeners) {
-      final String jobId = UUID.randomUUID().toString();
-      final Promise<T> promise = driverRpc.createPromise();
-      final JobHandleImpl<T> handle =
-          new JobHandleImpl<T>(AbstractSparkClient.this, promise, jobId, listeners);
-      jobs.put(jobId, handle);
-
-      final io.netty.util.concurrent.Future<Void> rpc = driverRpc.call(new JobRequest(jobId, job));
-      LOG.debug("Send JobRequest[{}].", jobId);
-
-      // Link the RPC and the promise so that events from one are propagated to the other as
-      // needed.
-      rpc.addListener(new GenericFutureListener<io.netty.util.concurrent.Future<Void>>() {
-        @Override
-        public void operationComplete(io.netty.util.concurrent.Future<Void> f) {
-          if (f.isSuccess()) {
-            // If the spark job finishes before this listener is called, the QUEUED status will not be set
-            handle.changeState(JobHandle.State.QUEUED);
-          } else if (!promise.isDone()) {
-            promise.setFailure(f.cause());
-          }
-        }
-      });
-      promise.addListener(new GenericFutureListener<Promise<T>>() {
-        @Override
-        public void operationComplete(Promise<T> p) {
-          if (jobId != null) {
-            jobs.remove(jobId);
-          }
-          if (p.isCancelled() && !rpc.isDone()) {
-            rpc.cancel(true);
-          }
-        }
-      });
-      return handle;
-    }
 
     <T extends Serializable> Future<T> run(Job<T> job) {
       @SuppressWarnings("unchecked")

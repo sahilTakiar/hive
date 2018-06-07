@@ -35,6 +35,8 @@ import com.google.common.base.Throwables;
 import org.apache.hadoop.hive.common.metrics.common.Metrics;
 import org.apache.hadoop.hive.common.metrics.common.MetricsConstant;
 import org.apache.hadoop.hive.ql.exec.spark.Statistic.SparkStatisticsNames;
+import org.apache.hadoop.hive.ql.exec.spark.session.SparkSessionWorkSubmitter;
+import org.apache.hadoop.hive.ql.exec.spark.session.SparkWorkSubmitterFactory;
 import org.apache.hadoop.hive.ql.exec.spark.status.impl.SparkMetricsUtils;
 
 import org.apache.hadoop.hive.ql.exec.spark.status.SparkStage;
@@ -125,7 +127,7 @@ public class SparkTask extends Task<SparkWork> {
       // Submit the Spark job
       perfLogger.PerfLogBegin(CLASS_NAME, PerfLogger.SPARK_SUBMIT_JOB);
       submitTime = perfLogger.getStartTime(PerfLogger.SPARK_SUBMIT_JOB);
-      jobRef = sparkSession.submit(driverContext, sparkWork);
+      jobRef = SparkWorkSubmitterFactory.getSparkWorkSubmitter(conf).submit(driverContext, sparkWork);
       perfLogger.PerfLogEnd(CLASS_NAME, PerfLogger.SPARK_SUBMIT_JOB);
 
       // If the driver context has been shutdown (due to query cancellation) kill the Spark job

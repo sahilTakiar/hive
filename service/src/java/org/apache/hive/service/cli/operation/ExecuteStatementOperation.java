@@ -20,6 +20,7 @@ package org.apache.hive.service.cli.operation;
 import java.sql.SQLException;
 import java.util.Map;
 
+import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.processors.CommandProcessor;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorFactory;
 import org.apache.hive.common.util.HiveStringUtils;
@@ -53,9 +54,16 @@ public abstract class ExecuteStatementOperation extends Operation {
       throw new HiveSQLException(e.getMessage(), e.getSQLState(), e);
     }
     if (processor == null) {
-      // runAsync, queryTimeout makes sense only for a SQLOperation
-      // Pass the original statement to SQLOperation as sql parser can remove comments by itself
-      return new SQLOperation(parentSession, statement, confOverlay, runAsync, queryTimeout);
+      // TODO handle confOverlay
+      if (parentSession.getHiveConf().getBoolVar(HiveConf.ConfVars
+              .HIVE_SERVER2_ENABLE_CONTAINER_SERVICE)) {
+        return new RemoteSQLOperation(parentSession, statement, confOverlay, runAsync,
+                queryTimeout);
+      } else {
+        // runAsync, queryTimeout makes sense only for a SQLOperation
+        // Pass the original statement to SQLOperation as sql parser can remove comments by itself
+        return new SQLOperation(parentSession, statement, confOverlay, runAsync, queryTimeout);
+      }
     }
     return new HiveCommandOperation(parentSession, cleanStatement, processor, confOverlay);
   }

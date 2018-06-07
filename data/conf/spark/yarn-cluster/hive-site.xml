@@ -27,6 +27,11 @@
 
 <!-- Hive Execution Parameters -->
 <property>
+  <name>hive.server2.enable.container.service</name>
+  <value>true</value>
+</property>
+
+<property>
   <name>hadoop.tmp.dir</name>
   <value>${test.tmp.dir}/hadoop-tmp</value>
   <description>A base for other temporary directories.</description>

@@ -29,8 +29,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -46,7 +44,6 @@ import org.apache.hive.spark.client.rpc.Rpc;
 import org.apache.hive.spark.client.rpc.RpcConfiguration;
 import org.apache.hive.spark.counter.SparkCounters;
 import org.apache.spark.SparkConf;
-import org.apache.spark.SparkJobInfo;
 import org.apache.spark.api.java.JavaFutureAction;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.scheduler.SparkListener;
@@ -70,25 +67,26 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @InterfaceAudience.Private
 public class RemoteDriver {
 
-  private static final Logger LOG = LoggerFactory.getLogger(RemoteDriver.class);
+  static final Logger LOG = LoggerFactory.getLogger(RemoteDriver.class);
+  private static RemoteDriver instance;
 
-  private final Map<String, JobWrapper<?>> activeJobs;
-  private final Object jcLock;
+  final Map<String, JobWrapper<?>> activeJobs;
+  final Object jcLock;
   private final Object shutdownLock;
-  private final ExecutorService executor;
+  final ExecutorService executor;
   private final NioEventLoopGroup egroup;
-  private final Rpc clientRpc;
-  private final DriverProtocol protocol;
+  final Rpc clientRpc;
+  final DriverProtocol protocol;
   // a local temp dir specific to this driver
   private final File localTmpDir;
 
   // Used to queue up requests while the SparkContext is being created.
-  private final List<JobWrapper<?>> jobQueue = Lists.newLinkedList();
+  final List<JobWrapper<?>> jobQueue = Lists.newLinkedList();
 
   // jc is effectively final, but it has to be volatile since it's accessed by different
   // threads while the constructor is running.
-  private volatile JobContextImpl jc;
-  private volatile boolean running;
+  volatile JobContextImpl jc;
+  volatile boolean running;
 
   public static final String REMOTE_DRIVER_HOST_CONF = "--remote-host";
   public static final String REMOTE_DRIVER_PORT_CONF = "--remote-port";
@@ -148,7 +146,7 @@ public class RemoteDriver {
             .setNameFormat("Spark-Driver-RPC-Handler-%d")
             .setDaemon(true)
             .build());
-    this.protocol = new DriverProtocol();
+    this.protocol = DriverProtocolFactory.getDriverProtocol(mapConf, this);
 
     // The RPC library takes care of timing out this.
     this.clientRpc = Rpc.createClient(mapConf, egroup, serverAddress, serverPort,
@@ -191,6 +189,10 @@ public class RemoteDriver {
     }
   }
 
+  public static RemoteDriver getInstance() {
+    return instance;
+  }
+
   private void addShutdownHook() {
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
       if (running) {
@@ -216,7 +218,7 @@ public class RemoteDriver {
     }
   }
 
-  private void submit(JobWrapper<?> job) {
+  public void submit(JobWrapper<?> job) {
     synchronized (jcLock) {
       if (jc != null) {
         job.submit();
@@ -227,7 +229,7 @@ public class RemoteDriver {
     }
   }
 
-  private synchronized void shutdown(Throwable error) {
+  synchronized void shutdown(Throwable error) {
     if (running) {
       if (error == null) {
         LOG.info("Shutting down Spark Remote Driver.");
@@ -242,7 +244,7 @@ public class RemoteDriver {
       if (error != null) {
         try {
           protocol.sendError(error).get(futureTimeout, TimeUnit.MILLISECONDS);
-        } catch(InterruptedException|ExecutionException|TimeoutException e) {
+        } catch(InterruptedException|ExecutionException |TimeoutException e) {
           LOG.warn("Failed to send out the error during RemoteDriver shutdown", e);
         }
       }
@@ -258,7 +260,7 @@ public class RemoteDriver {
     }
   }
 
-  private boolean cancelJob(JobWrapper<?> job) {
+  boolean cancelJob(JobWrapper<?> job) {
     boolean cancelled = false;
     for (JavaFutureAction<?> action : job.jobs) {
       cancelled |= action.cancel(true);
@@ -275,213 +277,8 @@ public class RemoteDriver {
     return args[valIdx];
   }
 
-  private class DriverProtocol extends BaseProtocol {
-
-    Future<Void> sendError(Throwable error) {
-      LOG.debug("Send error to Client: {}", Throwables.getStackTraceAsString(error));
-      return clientRpc.call(new Error(Throwables.getStackTraceAsString(error)));
-    }
-
-    Future<Void> sendErrorMessage(String cause) {
-      LOG.debug("Send error to Client: {}", cause);
-      return clientRpc.call(new Error(cause));
-    }
-
-    <T extends Serializable>
-    Future<Void> jobFinished(String jobId, T result,
-        Throwable error, SparkCounters counters) {
-      LOG.debug("Send job({}) result to Client.", jobId);
-      return clientRpc.call(new JobResult<T>(jobId, result, error, counters));
-    }
-
-    Future<Void> jobStarted(String jobId) {
-      return clientRpc.call(new JobStarted(jobId));
-    }
-
-    Future<Void> jobSubmitted(String jobId, int sparkJobId) {
-      LOG.debug("Send job({}/{}) submitted to Client.", jobId, sparkJobId);
-      return clientRpc.call(new JobSubmitted(jobId, sparkJobId));
-    }
-
-    Future<Void> sendMetrics(String jobId, int sparkJobId, int stageId, long taskId, Metrics metrics) {
-      LOG.debug("Send task({}/{}/{}/{}) metric to Client.", jobId, sparkJobId, stageId, taskId);
-      return clientRpc.call(new JobMetrics(jobId, sparkJobId, stageId, taskId, metrics));
-    }
-
-    private void handle(ChannelHandlerContext ctx, CancelJob msg) {
-      JobWrapper<?> job = activeJobs.get(msg.id);
-      if (job == null || !cancelJob(job)) {
-        LOG.info("Requested to cancel an already finished client job.");
-      }
-    }
-
-    private void handle(ChannelHandlerContext ctx, EndSession msg) {
-      LOG.debug("Shutting down due to EndSession request.");
-      shutdown(null);
-    }
-
-    private void handle(ChannelHandlerContext ctx, JobRequest msg) {
-      LOG.debug("Received client job request {}", msg.id);
-      JobWrapper<?> wrapper = new JobWrapper<Serializable>(msg);
-      activeJobs.put(msg.id, wrapper);
-      submit(wrapper);
-    }
-
-    private Object handle(ChannelHandlerContext ctx, SyncJobRequest msg) throws Exception {
-      // In case the job context is not up yet, let's wait, since this is supposed to be a
-      // "synchronous" RPC.
-      if (jc == null) {
-        synchronized (jcLock) {
-          while (jc == null) {
-            jcLock.wait();
-            if (!running) {
-              throw new IllegalStateException("Remote Spark context is shutting down.");
-            }
-          }
-        }
-      }
-
-      jc.setMonitorCb(new MonitorCallback() {
-        @Override
-        public void call(JavaFutureAction<?> future,
-            SparkCounters sparkCounters, Set<Integer> cachedRDDIds) {
-          throw new IllegalStateException(
-            "JobContext.monitor() is not available for synchronous jobs.");
-        }
-      });
-      try {
-        return msg.job.call(jc);
-      } finally {
-        jc.setMonitorCb(null);
-      }
-    }
-
-    @Override
-    public String name() {
-      return "Remote Spark Driver to HiveServer2 Connection";
-    }
-  }
-
-  private class JobWrapper<T extends Serializable> implements Callable<Void> {
-
-    private final BaseProtocol.JobRequest<T> req;
-    private final List<JavaFutureAction<?>> jobs;
-    private final AtomicInteger jobEndReceived;
-    private int completed;
-    private SparkCounters sparkCounters;
-    private Set<Integer> cachedRDDIds;
-    private Integer sparkJobId;
-
-    private Future<?> future;
-
-    JobWrapper(BaseProtocol.JobRequest<T> req) {
-      this.req = req;
-      this.jobs = Lists.newArrayList();
-      completed = 0;
-      jobEndReceived = new AtomicInteger(0);
-      this.sparkCounters = null;
-      this.cachedRDDIds = null;
-      this.sparkJobId = null;
-    }
-
-    @Override
-    public Void call() throws Exception {
-      protocol.jobStarted(req.id);
-
-      try {
-        jc.setMonitorCb(new MonitorCallback() {
-          @Override
-          public void call(JavaFutureAction<?> future,
-              SparkCounters sparkCounters, Set<Integer> cachedRDDIds) {
-            monitorJob(future, sparkCounters, cachedRDDIds);
-          }
-        });
-
-        T result = req.job.call(jc);
-        // In case the job is empty, there won't be JobStart/JobEnd events. The only way
-        // to know if the job has finished is to check the futures here ourselves.
-        for (JavaFutureAction<?> future : jobs) {
-          future.get();
-          completed++;
-          LOG.debug("Client job {}: {} of {} Spark jobs finished.",
-              req.id, completed, jobs.size());
-        }
-
-        // If the job is not empty (but runs fast), we have to wait until all the TaskEnd/JobEnd
-        // events are processed. Otherwise, task metrics may get lost. See HIVE-13525.
-        if (sparkJobId != null) {
-          SparkJobInfo sparkJobInfo = jc.sc().statusTracker().getJobInfo(sparkJobId);
-          if (sparkJobInfo != null && sparkJobInfo.stageIds() != null &&
-              sparkJobInfo.stageIds().length > 0) {
-            synchronized (jobEndReceived) {
-              while (jobEndReceived.get() < jobs.size()) {
-                jobEndReceived.wait();
-              }
-            }
-          }
-        }
-
-        SparkCounters counters = null;
-        if (sparkCounters != null) {
-          counters = sparkCounters.snapshot();
-        }
-
-        protocol.jobFinished(req.id, result, null, counters);
-      } catch (Throwable t) {
-        // Catch throwables in a best-effort to report job status back to the client. It's
-        // re-thrown so that the executor can destroy the affected thread (or the JVM can
-        // die or whatever would happen if the throwable bubbled up).
-        LOG.error("Failed to run client job " + req.id, t);
-        protocol.jobFinished(req.id, null, t,
-            sparkCounters != null ? sparkCounters.snapshot() : null);
-        throw new ExecutionException(t);
-      } finally {
-        jc.setMonitorCb(null);
-        activeJobs.remove(req.id);
-        releaseCache();
-      }
-      return null;
-    }
-
-    void submit() {
-      this.future = executor.submit(this);
-    }
-
-    void jobDone() {
-      synchronized (jobEndReceived) {
-        jobEndReceived.incrementAndGet();
-        jobEndReceived.notifyAll();
-      }
-    }
-
-    /**
-     * Release cached RDDs as soon as the job is done.
-     * This is different from local Spark client so as
-     * to save a RPC call/trip, avoid passing cached RDD
-     * id information around. Otherwise, we can follow
-     * the local Spark client way to be consistent.
-     */
-    void releaseCache() {
-      if (cachedRDDIds != null) {
-        for (Integer cachedRDDId: cachedRDDIds) {
-          jc.sc().sc().unpersistRDD(cachedRDDId, false);
-        }
-      }
-    }
-
-    private void monitorJob(JavaFutureAction<?> job,
-        SparkCounters sparkCounters, Set<Integer> cachedRDDIds) {
-      jobs.add(job);
-      if (!jc.getMonitoredJobs().containsKey(req.id)) {
-        jc.getMonitoredJobs().put(req.id, new CopyOnWriteArrayList<JavaFutureAction<?>>());
-      }
-      jc.getMonitoredJobs().get(req.id).add(job);
-      this.sparkCounters = sparkCounters;
-      this.cachedRDDIds = cachedRDDIds;
-      sparkJobId = job.jobIds().get(0);
-      protocol.jobSubmitted(req.id, sparkJobId);
-    }
-
+  public JavaSparkContext sc() {
+    return this.jc.sc();
   }
 
   private class ClientListener extends SparkListener {
@@ -557,6 +354,7 @@ public class RemoteDriver {
 
   public static void main(String[] args) throws Exception {
     RemoteDriver rd = new RemoteDriver(args);
+    RemoteDriver.instance = rd;
     try {
       rd.run();
     } catch (Exception e) {

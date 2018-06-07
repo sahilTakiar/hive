@@ -41,6 +41,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.hadoop.hive.ql.session.SessionState;
+import org.apache.hive.spark.client.RemoteDriver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,6 +66,7 @@ public class DriverContext {
   private boolean shutdown;
 
   final Map<String, StatsTask> statsTasks = new HashMap<>(1);
+  public RemoteDriver remoteDriver;
 
   public DriverContext() {
   }

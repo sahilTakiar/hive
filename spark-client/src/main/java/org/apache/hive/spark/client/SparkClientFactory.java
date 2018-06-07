@@ -43,7 +43,7 @@ public final class SparkClientFactory {
   private static final Object serverLock = new Object();
 
   /**
-   * Initializes the SparkClient library. Must be called before creating client instances.
+   * Initializes the SparkClient library. M ust be called before creating client instances.
    *
    * @param conf Map containing configuration parameters for the client library.
    */

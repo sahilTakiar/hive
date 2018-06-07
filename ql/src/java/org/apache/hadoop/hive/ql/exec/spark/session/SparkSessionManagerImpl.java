@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.hive.ql.exec.spark.HiveSparkAppClientFactory;
 import org.apache.hive.common.util.ShutdownHookManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,7 +80,7 @@ public class SparkSessionManagerImpl implements SparkSessionManager {
       synchronized (this) {
         if (!inited) {
           LOG.info("Setting up the session manager.");
-          Map<String, String> conf = HiveSparkClientFactory.initiateSparkConf(hiveConf, null);
+          Map<String, String> conf = HiveSparkAppClientFactory.initiateSparkConf(hiveConf, null);
           try {
             SparkClientFactory.initialize(conf);
             inited = true;

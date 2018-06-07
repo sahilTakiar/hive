@@ -48,21 +48,21 @@ public class EnforceReadOnlyTables implements ExecuteWithHookContext {
     throws Exception {
 
     // Don't enforce during test driver setup or shutdown.
-    if (sess.getConf().getBoolean("hive.test.init.phase", false) ||
-        sess.getConf().getBoolean("hive.test.shutdown.phase", false)) {
-      return;
-    }
-    List<String> readOnlyTables = Arrays.asList(System.getProperty("test.src.tables").split(","));
-
-    for (WriteEntity w: outputs) {
-      if ((w.getTyp() == WriteEntity.Type.TABLE) ||
-          (w.getTyp() == WriteEntity.Type.PARTITION)) {
-        Table t = w.getTable();
-        if (DEFAULT_DATABASE_NAME.equalsIgnoreCase(t.getDbName())
-            && readOnlyTables.contains(t.getTableName())) {
-          throw new RuntimeException ("Cannot overwrite read-only table: " + t.getTableName());
-        }
-      }
-    }
+//    if (sess.getConf().getBoolean("hive.test.init.phase", false) ||
+//        sess.getConf().getBoolean("hive.test.shutdown.phase", false)) {
+//      return;
+//    }
+//    List<String> readOnlyTables = Arrays.asList(System.getProperty("test.src.tables").split(","));
+//
+//    for (WriteEntity w: outputs) {
+//      if ((w.getTyp() == WriteEntity.Type.TABLE) ||
+//          (w.getTyp() == WriteEntity.Type.PARTITION)) {
+//        Table t = w.getTable();
+//        if (DEFAULT_DATABASE_NAME.equalsIgnoreCase(t.getDbName())
+//            && readOnlyTables.contains(t.getTableName())) {
+//          throw new RuntimeException ("Cannot overwrite read-only table: " + t.getTableName());
+//        }
+//      }
+//    }
   }
 }
