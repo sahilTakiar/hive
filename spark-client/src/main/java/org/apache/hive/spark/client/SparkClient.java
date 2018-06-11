@@ -117,4 +117,6 @@ public interface SparkClient extends Serializable {
    * @param jobId the jobId to cancel
    */
   void cancel(String jobId);
+
+  ClientProtocol getClientProtocol();
 }

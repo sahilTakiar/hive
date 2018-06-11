@@ -18,6 +18,7 @@
 package org.apache.hadoop.hive.ql.exec.spark.session;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hive.ql.exec.spark.HiveSparkAppClientFactory;
 import org.apache.hadoop.hive.ql.exec.spark.HiveSparkClientFactory;
 import org.apache.hadoop.hive.ql.exec.spark.LocalHiveSparkAppClient;
 import org.apache.hadoop.hive.ql.exec.spark.LocalHiveSparkClient;
+import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.session.SessionState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -110,11 +112,16 @@ public class SparkSessionImpl implements SparkSession {
   }
 
   @Override
-  public void submit(String statement) throws Exception {
+  public CommandProcessorResponse submit(String statement) throws Exception {
     // TODO - just create a RemoteClient and submit job through there
     LOG.info("SUBMITTING STATEMENT " + statement);
     hiveSparkClient = HiveSparkClientFactory.createHiveSparkClient(hiveSparkAppClient);
-    hiveSparkClient.execute(statement);
+    return hiveSparkClient.execute(statement);
+  }
+
+  @Override
+  public boolean getResults(List res) throws IOException {
+    return hiveSparkClient.getResults(res);
   }
 
   @Override

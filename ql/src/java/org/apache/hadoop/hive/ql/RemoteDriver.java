@@ -18,6 +18,7 @@ import java.util.List;
 public class RemoteDriver implements IDriver {
 
   private final IDriver driver;
+  ContainerServiceClient client;
 
   public RemoteDriver(IDriver driver) {
     this.driver = driver;
@@ -56,7 +57,7 @@ public class RemoteDriver implements IDriver {
   @Override
   public CommandProcessorResponse run(String command) {
     // TODO proper handling of CommandProcessorResponse
-    ContainerServiceClient client = SessionState.get().getContainerServiceClient();
+    client = SessionState.get().getContainerServiceClient();
     if (client == null) {
       try {
         client = ContainerLauncherFactory.getContainerLauncher(this.driver.getConf()).launch();
@@ -66,16 +67,15 @@ public class RemoteDriver implements IDriver {
       }
     }
     try {
-      client.execute(command);
+      return client.execute(command);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
-    return null;
   }
 
   @Override
   public boolean getResults(List res) throws IOException {
-    return false;
+    return client.getResults(res);
   }
 
   @Override

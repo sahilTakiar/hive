@@ -6,11 +6,13 @@ import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.session.SessionState;
 
 import java.io.IOException;
+import java.util.List;
 
 // TODO should return CommanProcessorResponse instead of throwing exceptions
 public class ContainerDriver implements CommandProcessor {
 
   private final HiveConf hiveConf;
+  ContainerServiceClient client;
 
   public ContainerDriver(HiveConf hiveConf) {
     this.hiveConf = hiveConf;
@@ -18,7 +20,7 @@ public class ContainerDriver implements CommandProcessor {
 
   @Override
   public CommandProcessorResponse run(String command) {
-    ContainerServiceClient client = SessionState.get().getContainerServiceClient();
+    client = SessionState.get().getContainerServiceClient();
     if (client == null) {
       try {
         client = ContainerLauncherFactory.getContainerLauncher(hiveConf).launch();
@@ -39,4 +41,8 @@ public class ContainerDriver implements CommandProcessor {
   public void close() throws Exception {
 
   }
+
+//  public boolean getResults(List res) throws IOException {
+//    client.getResults(res);
+//  }
 }

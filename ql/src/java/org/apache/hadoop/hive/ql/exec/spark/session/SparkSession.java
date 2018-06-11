@@ -24,8 +24,10 @@ import org.apache.hadoop.hive.ql.DriverContext;
 import org.apache.hadoop.hive.ql.exec.spark.status.SparkJobRef;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.SparkWork;
+import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 
 import java.io.IOException;
+import java.util.List;
 
 public interface SparkSession {
   /**
@@ -42,7 +44,9 @@ public interface SparkSession {
    */
   SparkJobRef submit(DriverContext driverContext, SparkWork sparkWork) throws Exception;
 
-  void submit(String statement) throws Exception;
+  CommandProcessorResponse submit(String statement) throws Exception;
+
+  boolean getResults(List res) throws IOException;
 
   /**
    * Get Spark shuffle memory per task, and total number of cores. This

@@ -17,14 +17,11 @@
 
 package org.apache.hive.spark.client;
 
-import com.google.common.base.Throwables;
 import com.google.common.io.Files;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.nio.NioEventLoopGroup;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +39,6 @@ import org.apache.hadoop.hive.common.classification.InterfaceAudience;
 import org.apache.hive.spark.client.metrics.Metrics;
 import org.apache.hive.spark.client.rpc.Rpc;
 import org.apache.hive.spark.client.rpc.RpcConfiguration;
-import org.apache.hive.spark.counter.SparkCounters;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaFutureAction;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -67,25 +63,25 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @InterfaceAudience.Private
 public class RemoteDriver {
 
-  static final Logger LOG = LoggerFactory.getLogger(RemoteDriver.class);
+  public static final Logger LOG = LoggerFactory.getLogger(RemoteDriver.class);
   private static RemoteDriver instance;
 
-  final Map<String, JobWrapper<?>> activeJobs;
-  final Object jcLock;
+  public final Map<String, JobWrapper<?>> activeJobs;
+  public final Object jcLock;
   private final Object shutdownLock;
-  final ExecutorService executor;
+  public final ExecutorService executor;
   private final NioEventLoopGroup egroup;
-  final Rpc clientRpc;
+  public final Rpc clientRpc;
   final DriverProtocol protocol;
   // a local temp dir specific to this driver
   private final File localTmpDir;
 
   // Used to queue up requests while the SparkContext is being created.
-  final List<JobWrapper<?>> jobQueue = Lists.newLinkedList();
+  final List<Submittable> jobQueue = Lists.newLinkedList();
 
   // jc is effectively final, but it has to be volatile since it's accessed by different
   // threads while the constructor is running.
-  volatile JobContextImpl jc;
+  public volatile JobContextImpl jc;
   volatile boolean running;
 
   public static final String REMOTE_DRIVER_HOST_CONF = "--remote-host";
@@ -183,7 +179,7 @@ public class RemoteDriver {
     }
 
     synchronized (jcLock) {
-      for (Iterator<JobWrapper<?>> it = jobQueue.iterator(); it.hasNext();) {
+      for (Iterator<Submittable> it = jobQueue.iterator(); it.hasNext();) {
         it.next().submit();
       }
     }
@@ -219,6 +215,17 @@ public class RemoteDriver {
   }
 
   public void submit(JobWrapper<?> job) {
+    synchronized (jcLock) {
+      if (jc != null) {
+        job.submit();
+      } else {
+        LOG.info("SparkContext not yet up; adding Hive on Spark job request to the queue.");
+        jobQueue.add(job);
+      }
+    }
+  }
+
+  public void submit(DriverJobWrapper<?> job) {
     synchronized (jcLock) {
       if (jc != null) {
         job.submit();

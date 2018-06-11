@@ -55,15 +55,15 @@ public abstract class ExecuteStatementOperation extends Operation {
     }
     if (processor == null) {
       // TODO handle confOverlay
-      if (parentSession.getHiveConf().getBoolVar(HiveConf.ConfVars
-              .HIVE_SERVER2_ENABLE_CONTAINER_SERVICE)) {
-        return new RemoteSQLOperation(parentSession, statement, confOverlay, runAsync,
-                queryTimeout);
-      } else {
+//      if (parentSession.getHiveConf().getBoolVar(HiveConf.ConfVars
+//              .HIVE_SERVER2_ENABLE_CONTAINER_SERVICE)) {
+//        return new RemoteSQLOperation(parentSession, statement, confOverlay, runAsync,
+//                queryTimeout);
+//      } else {
         // runAsync, queryTimeout makes sense only for a SQLOperation
         // Pass the original statement to SQLOperation as sql parser can remove comments by itself
         return new SQLOperation(parentSession, statement, confOverlay, runAsync, queryTimeout);
-      }
+//      }
     }
     return new HiveCommandOperation(parentSession, cleanStatement, processor, confOverlay);
   }

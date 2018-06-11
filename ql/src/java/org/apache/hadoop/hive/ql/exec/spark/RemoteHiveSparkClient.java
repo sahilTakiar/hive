@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hive.ql.io.NullScanFileSystem;
+import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hive.spark.client.SparkClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,6 +87,7 @@ public class RemoteHiveSparkClient implements HiveSparkClient {
 
   private HiveConf hiveConf;
   private SparkClient sparkClient;
+  private RemoteDriverSparkClient remoteDriverSparkClient;
 
   RemoteHiveSparkClient(RemoteHiveSparkAppClient sparkAppClient) throws Exception {
     // this.sparkAppClient = sparkAppClient;
@@ -93,6 +95,7 @@ public class RemoteHiveSparkClient implements HiveSparkClient {
     this.hiveConf = sparkAppClient.hiveConf;
     this.sparkClient = sparkAppClient.remoteClient;
     sparkConf = sparkAppClient.getSparkConf();
+    this.remoteDriverSparkClient = new RemoteDriverSparkClientImpl(sparkClient.getClientProtocol());
   }
 
   public RemoteHiveSparkClient(HiveConf hiveConf, SparkClient sparkClient) {
@@ -101,6 +104,7 @@ public class RemoteHiveSparkClient implements HiveSparkClient {
     this.sparkClient = sparkClient;
     this.sparkConf = HiveSparkAppClientFactory.generateSparkConf(HiveSparkAppClientFactory
             .initiateSparkConf(hiveConf, null));
+    this.remoteDriverSparkClient = new RemoteDriverSparkClientImpl(sparkClient.getClientProtocol());
   }
 
   @Override
@@ -120,16 +124,22 @@ public class RemoteHiveSparkClient implements HiveSparkClient {
   }
 
   @Override
-  public void execute(final String statement) {
+  public CommandProcessorResponse execute(final String statement) {
     LOG.info("REMOTEHIVESPARKCLIENT SUBMITTING " + statement);
     byte[] hiveConfBytes = KryoSerializer.serializeHiveConf(hiveConf);
-    sparkClient.submit(new DriverJob(hiveConfBytes, statement));
+    return this.remoteDriverSparkClient.run(statement);
+    //sparkClient.submit(new DriverJob(hiveConfBytes, statement));
 //    sparkClient.submit(new Job<Serializable>() {
 //      @Override
 //      public Serializable call(JobContext jc) throws Exception {
 //        return new RemoteStatementExecutor(hiveConf, jc, statement).run();
 //      }
 //    });
+  }
+
+  @Override
+  public boolean getResults(List res) throws IOException {
+    return this.remoteDriverSparkClient.getResults(res);
   }
 
   private SparkJobRef submit(final DriverContext driverContext, final SparkWork sparkWork) throws Exception {

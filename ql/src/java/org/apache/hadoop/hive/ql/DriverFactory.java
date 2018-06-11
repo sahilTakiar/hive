@@ -39,6 +39,10 @@ public class DriverFactory {
   }
 
   public static IDriver newDriver(QueryState queryState, String userName, QueryInfo queryInfo) {
+    if (queryState.getConf().getBoolVar(ConfVars.HIVE_SERVER2_ENABLE_CONTAINER_SERVICE)) {
+      return new RemoteDriver(new Driver(queryState, userName, queryInfo));
+    }
+
     boolean enabled = queryState.getConf().getBoolVar(ConfVars.HIVE_QUERY_REEXECUTION_ENABLED);
     if (!enabled) {
       return new Driver(queryState, userName, queryInfo);

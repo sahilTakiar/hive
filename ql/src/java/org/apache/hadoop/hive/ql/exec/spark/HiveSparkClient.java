@@ -18,11 +18,14 @@
 package org.apache.hadoop.hive.ql.exec.spark;
 
 import java.io.Closeable;
+import java.io.IOException;
 import java.io.Serializable;
+import java.util.List;
 
 import org.apache.hadoop.hive.ql.DriverContext;
 import org.apache.hadoop.hive.ql.exec.spark.status.SparkJobRef;
 import org.apache.hadoop.hive.ql.plan.SparkWork;
+import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.spark.SparkConf;
 
 /**
@@ -39,5 +42,7 @@ public interface HiveSparkClient extends Serializable, Closeable {
    */
   SparkJobRef execute(DriverContext driverContext, SparkWork sparkWork) throws Exception;
 
-  void execute(String statement);
+  CommandProcessorResponse execute(String statement);
+
+  boolean getResults(List res) throws IOException;
 }

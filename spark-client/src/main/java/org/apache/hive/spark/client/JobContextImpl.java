@@ -72,7 +72,7 @@ public class JobContextImpl implements JobContext {
     return localTmpDir;
   }
 
-  void setMonitorCb(MonitorCallback cb) {
+  public void setMonitorCb(MonitorCallback cb) {
     monitorCb.set(cb);
   }
 

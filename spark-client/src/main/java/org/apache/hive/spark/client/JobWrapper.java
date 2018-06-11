@@ -14,7 +14,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class JobWrapper<T extends Serializable> implements Callable<Void> {
+public class JobWrapper<T extends Serializable> implements Callable<Void>, Submittable {
 
   private RemoteDriver remoteDriver;
   private final BaseProtocol.JobRequest<T> req;
@@ -97,7 +97,8 @@ public class JobWrapper<T extends Serializable> implements Callable<Void> {
     return null;
   }
 
-  void submit() {
+  @Override
+  public void submit() {
     this.future = remoteDriver.executor.submit(this);
   }
 

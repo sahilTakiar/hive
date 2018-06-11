@@ -28,10 +28,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.concurrent.GenericFutureListener;
-import io.netty.util.concurrent.Promise;
-
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -41,13 +37,10 @@ import java.io.Serializable;
 import java.io.Writer;
 import java.net.URI;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -81,7 +74,7 @@ abstract class AbstractSparkClient implements SparkClient {
 
   private static final long serialVersionUID = 1L;
 
-  private static final Logger LOG = LoggerFactory.getLogger(AbstractSparkClient.class);
+  static final Logger LOG = LoggerFactory.getLogger(AbstractSparkClient.class);
 
   private static final long DEFAULT_SHUTDOWN_TIMEOUT = 10000; // In milliseconds
 
@@ -95,8 +88,8 @@ abstract class AbstractSparkClient implements SparkClient {
   protected final Map<String, String> conf;
   private final HiveConf hiveConf;
   private final Future<Void> driverFuture;
-  private final Map<String, JobHandleImpl<?>> jobs;
-  private final Rpc driverRpc;
+  final Map<String, JobHandleImpl<?>> jobs;
+  final Rpc driverRpc;
   private final ClientProtocol protocol;
   protected volatile boolean isAlive;
 
@@ -108,7 +101,7 @@ abstract class AbstractSparkClient implements SparkClient {
 
     String secret = rpcServer.createSecret();
     this.driverFuture = startDriver(rpcServer, sessionid, secret);
-    this.protocol = new ClientProtocol();
+    this.protocol = new ClientProtocol(this);
 
     try {
       // The RPC server will take care of timeouts here.
@@ -398,6 +391,11 @@ abstract class AbstractSparkClient implements SparkClient {
     return launchDriver(isTesting, rpcServer, clientId);
   }
 
+  @Override
+  public ClientProtocol getClientProtocol() {
+    return this.protocol;
+  }
+
   protected abstract Future<Void> launchDriver(String isTesting, RpcServer rpcServer, String
           clientId) throws IOException;
 
@@ -423,114 +421,6 @@ abstract class AbstractSparkClient implements SparkClient {
   protected abstract void addExecutorMemory(String executorMemory);
 
   protected abstract void addExecutorCores(String executorCores);
-
-  private class ClientProtocol extends BaseProtocol {
-
-    <T extends Serializable> JobHandleImpl<T> submit(Job<T> job, List<JobHandle.Listener<T>> listeners) {
-      final String jobId = UUID.randomUUID().toString();
-      final Promise<T> promise = driverRpc.createPromise();
-      final JobHandleImpl<T> handle =
-          new JobHandleImpl<T>(AbstractSparkClient.this, promise, jobId, listeners);
-      jobs.put(jobId, handle);
-
-      final io.netty.util.concurrent.Future<Void> rpc = driverRpc.call(new JobRequest(jobId, job));
-      LOG.debug("Send JobRequest[{}].", jobId);
-
-      // Link the RPC and the promise so that events from one are propagated to the other as
-      // needed.
-      rpc.addListener(new GenericFutureListener<io.netty.util.concurrent.Future<Void>>() {
-        @Override
-        public void operationComplete(io.netty.util.concurrent.Future<Void> f) {
-          if (f.isSuccess()) {
-            // If the spark job finishes before this listener is called, the QUEUED status will not be set
-            handle.changeState(JobHandle.State.QUEUED);
-          } else if (!promise.isDone()) {
-            promise.setFailure(f.cause());
-          }
-        }
-      });
-      promise.addListener(new GenericFutureListener<Promise<T>>() {
-        @Override
-        public void operationComplete(Promise<T> p) {
-          if (jobId != null) {
-            jobs.remove(jobId);
-          }
-          if (p.isCancelled() && !rpc.isDone()) {
-            rpc.cancel(true);
-          }
-        }
-      });
-      return handle;
-    }
-
-    <T extends Serializable> Future<T> run(Job<T> job) {
-      @SuppressWarnings("unchecked")
-      final io.netty.util.concurrent.Future<T> rpc = (io.netty.util.concurrent.Future<T>)
-        driverRpc.call(new SyncJobRequest(job), Serializable.class);
-      return rpc;
-    }
-
-    void cancel(String jobId) {
-      driverRpc.call(new CancelJob(jobId));
-    }
-
-    Future<?> endSession() {
-      return driverRpc.call(new EndSession());
-    }
-
-    private void handle(ChannelHandlerContext ctx, Error msg) {
-      LOG.warn("Error reported from Remote Spark Driver: {}", msg.cause);
-    }
-
-    private void handle(ChannelHandlerContext ctx, JobMetrics msg) {
-      JobHandleImpl<?> handle = jobs.get(msg.jobId);
-      if (handle != null) {
-        handle.getMetrics().addMetrics(msg.sparkJobId, msg.stageId, msg.taskId, msg.metrics);
-      } else {
-        LOG.warn("Received metrics for unknown Spark job {}", msg.sparkJobId);
-      }
-    }
-
-    private void handle(ChannelHandlerContext ctx, JobResult msg) {
-      JobHandleImpl<?> handle = jobs.remove(msg.id);
-      if (handle != null) {
-        LOG.debug("Received result for client job {}", msg.id);
-        handle.setSparkCounters(msg.sparkCounters);
-        Throwable error = msg.error;
-        if (error == null) {
-          handle.setSuccess(msg.result);
-        } else {
-          handle.setFailure(error);
-        }
-      } else {
-        LOG.warn("Received result for unknown client job {}", msg.id);
-      }
-    }
-
-    private void handle(ChannelHandlerContext ctx, JobStarted msg) {
-      JobHandleImpl<?> handle = jobs.get(msg.id);
-      if (handle != null) {
-        handle.changeState(JobHandle.State.STARTED);
-      } else {
-        LOG.warn("Received event for unknown client job {}", msg.id);
-      }
-    }
-
-    private void handle(ChannelHandlerContext ctx, JobSubmitted msg) {
-      JobHandleImpl<?> handle = jobs.get(msg.clientJobId);
-      if (handle != null) {
-        LOG.info("Received Spark job ID: {} for client job {}", msg.sparkJobId, msg.clientJobId);
-        handle.addSparkJobId(msg.sparkJobId);
-      } else {
-        LOG.warn("Received Spark job ID: {} for unknown client job {}", msg.sparkJobId, msg.clientJobId);
-      }
-    }
-
-    @Override
-    protected String name() {
-      return "HiveServer2 to Remote Spark Driver Connection";
-    }
-  }
 
   private static class AddJarJob implements Job<Serializable> {
     private static final long serialVersionUID = 1L;
@@ -597,5 +487,4 @@ abstract class AbstractSparkClient implements SparkClient {
       return jc.sc().sc().defaultParallelism();
     }
   }
-
 }
