@@ -227,9 +227,11 @@ public abstract class BaseProtocol extends RpcDispatcher {
   public static class ExecuteStatement implements Serializable {
 
     public final String statement;
+    public final byte[] hiveConfBytes;
 
-    ExecuteStatement(String statement) {
+    ExecuteStatement(String statement, byte[] hiveConfBytes) {
       this.statement = statement;
+      this.hiveConfBytes = hiveConfBytes;
     }
   }
 

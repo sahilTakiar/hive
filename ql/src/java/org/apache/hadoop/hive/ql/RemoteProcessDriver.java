@@ -11,17 +11,25 @@ import java.util.List;
 
 
 /**
- * Runs a {@link IDriver} in a remote process
- *
- * TODO this is really where the high level client-protocol should be defined
+ * Runs a {@link IDriver} in a remote process.
  */
-public class RemoteDriver implements IDriver {
+public class RemoteProcessDriver implements IDriver {
 
-  private final IDriver driver;
-  ContainerServiceClient client;
+  private final HiveConf hiveConf;
+  private final QueryState queryState;
+  private final String userName;
+  private final QueryInfo queryInfo;
 
-  public RemoteDriver(IDriver driver) {
-    this.driver = driver;
+  public RemoteProcessDriver(HiveConf hiveConf) {
+    this(new QueryState.Builder().withGenerateNewQueryId(true).withHiveConf(hiveConf).build(), null,
+            null);
+  }
+
+  public RemoteProcessDriver(QueryState queryState, String userName, QueryInfo queryInfo) {
+    this.hiveConf = queryState.getConf();
+    this.queryState = queryState;
+    this.userName = userName;
+    this.queryInfo = queryInfo;
   }
 
   @Override
@@ -56,18 +64,8 @@ public class RemoteDriver implements IDriver {
 
   @Override
   public CommandProcessorResponse run(String command) {
-    // TODO proper handling of CommandProcessorResponse
-    client = SessionState.get().getContainerServiceClient();
-    if (client == null) {
-      try {
-        client = ContainerLauncherFactory.getContainerLauncher(this.driver.getConf()).launch();
-        SessionState.get().setContainerServiceClient(client);
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    }
     try {
-      return client.execute(command);
+      return getRemoteProcessClient().execute(command);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
@@ -75,7 +73,7 @@ public class RemoteDriver implements IDriver {
 
   @Override
   public boolean getResults(List res) throws IOException {
-    return client.getResults(res);
+    return getRemoteProcessClient().getResults(res);
   }
 
   @Override
@@ -90,7 +88,7 @@ public class RemoteDriver implements IDriver {
 
   @Override
   public Schema getSchema() {
-    return null;
+    return new Schema();
   }
 
   @Override
@@ -118,13 +116,26 @@ public class RemoteDriver implements IDriver {
     return null;
   }
 
+  /**
+   * Don't support getting the {@link Context} because it requires serializing the entire context
+   * object. This method is mostly used for the {@link org.apache.hadoop.hive.ql.reexec.ReExecDriver}
+   * and various unit tests.
+   */
   @Override
   public Context getContext() {
-    return null;
+    throw new UnsupportedOperationException(
+            "RemoteProcessDriver does not support getting the Semantic Analyzer Context");
   }
 
   @Override
   public boolean hasResultSet() {
     return false;
+  }
+
+  /**
+   * Get or create the {@link RemoteProcessClient} associated with this session.
+   */
+  private RemoteProcessClient getRemoteProcessClient() throws IOException {
+    return SessionState.get().getRemoteProcessClient();
   }
 }

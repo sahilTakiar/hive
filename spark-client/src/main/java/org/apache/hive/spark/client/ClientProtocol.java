@@ -14,14 +14,16 @@ public class ClientProtocol extends BaseProtocol {
 
   private AbstractSparkClient sparkClient;
   private volatile String[] results;
-  public Object resultsLock = new Object();
+  private volatile boolean result;
+  public final Object resultsLock = new Object();
 
   public ClientProtocol(AbstractSparkClient sparkClient) {
     this.sparkClient = sparkClient;
   }
 
-  public void runStatement(String statement) {
-    sparkClient.driverRpc.call(new ExecuteStatement(statement));
+  public void runStatement(String statement, byte[] hiveConfBytes) {
+    AbstractSparkClient.LOG.debug("Sending execute query statement");
+    sparkClient.driverRpc.call(new ExecuteStatement(statement, hiveConfBytes));
   }
 
   public void sendGetResulsts() {
@@ -129,17 +131,24 @@ public class ClientProtocol extends BaseProtocol {
   }
 
   private void handle(ChannelHandlerContext ctx, SendResults msg) {
+    AbstractSparkClient.LOG.info("GOT QUERY RESULTS");
     this.results = msg.res;
+    this.result = msg.result;
+    synchronized (this.resultsLock) {
+      this.resultsLock.notify();
+    }
   }
 
-  private void handle(ChannelHandlerContext ctx, QueryResults msg) {
-    this.results = msg.results;
-    this.resultsLock.notify();
-  }
+//  private void handle(ChannelHandlerContext ctx, QueryResults msg) {
+//    AbstractSparkClient.LOG.info("GOT QUERY RESULTS");
+//    this.results = msg.results;
+//    this.result = msg.
+//    this.resultsLock.notify();
+//  }
 
   public boolean getResults(List<String> res) {
     res.addAll(Arrays.asList(results));
-    return true;
+    return this.result;
   }
 
   @Override

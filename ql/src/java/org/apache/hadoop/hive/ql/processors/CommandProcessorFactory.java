@@ -121,7 +121,7 @@ public final class CommandProcessorFactory {
     if (isBlank(cmd[0])) {
       return null;
     } else {
-      return DriverFactory.newDriver(conf);
+      return DriverFactory.newRemoteProcessDriver(conf);
     }
   }
 }

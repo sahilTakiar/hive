@@ -21,6 +21,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.common.ObjectPair;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.DriverContext;
+import org.apache.hadoop.hive.ql.exec.spark.HiveSparkClient;
 import org.apache.hadoop.hive.ql.exec.spark.status.SparkJobRef;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.SparkWork;
@@ -43,10 +44,6 @@ public interface SparkSession {
    * @return SparkJobRef
    */
   SparkJobRef submit(DriverContext driverContext, SparkWork sparkWork) throws Exception;
-
-  CommandProcessorResponse submit(String statement) throws Exception;
-
-  boolean getResults(List res) throws IOException;
 
   /**
    * Get Spark shuffle memory per task, and total number of cores. This
@@ -81,4 +78,6 @@ public interface SparkSession {
    * Get an HDFS dir specific to the SparkSession
    * */
   Path getHDFSSessionDir() throws IOException;
+
+  HiveSparkClient getHiveSparkClient();
 }

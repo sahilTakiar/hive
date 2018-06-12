@@ -6,9 +6,9 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.List;
 
-public interface RemoteDriverSparkClient extends Serializable {
+public interface RemoteProcessHiveSparkClient extends Serializable {
 
-  CommandProcessorResponse run(String command);
+  CommandProcessorResponse run(String command, byte[] hiveConfBytes);
 
   boolean getResults(List res) throws IOException;
 }

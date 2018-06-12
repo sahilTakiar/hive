@@ -2,11 +2,6 @@ package org.apache.hive.spark.client;
 
 import com.google.common.base.Throwables;
 import io.netty.channel.ChannelHandlerContext;
-import org.apache.hive.spark.client.BaseProtocol;
-import org.apache.hive.spark.client.DriverJobWrapper;
-import org.apache.hive.spark.client.JobWrapper;
-import org.apache.hive.spark.client.MonitorCallback;
-import org.apache.hive.spark.client.RemoteDriver;
 import org.apache.hive.spark.client.metrics.Metrics;
 import org.apache.hive.spark.counter.SparkCounters;
 import org.apache.spark.api.java.JavaFutureAction;
@@ -63,8 +58,8 @@ class DriverProtocol extends BaseProtocol {
     return remoteDriver.clientRpc.call(new JobMetrics(jobId, sparkJobId, stageId, taskId, metrics));
   }
 
-  void sendResults(String[] res) {
-    remoteDriver.clientRpc.call(new SendResults(res));
+  void sendResults(String[] res, boolean result) {
+    remoteDriver.clientRpc.call(new SendResults(res, result));
   }
 
   private void handle(ChannelHandlerContext ctx, CancelJob msg) {
@@ -91,21 +86,23 @@ class DriverProtocol extends BaseProtocol {
     //DriverJobWrapper<?> wrapper = new DriverJobWrapper<Serializable>(remoteDriver, msg);
 //    remoteDriver.activeJobs.put(msg.id, wrapper);
     //remoteDriver.submit(wrapper);
-    this.queryExecutorService.run(msg.statement);
+    this.queryExecutorService.run(msg.statement, msg.hiveConfBytes);
   }
 
   private void handle(ChannelHandlerContext ctx, GetResults msg) {
-    remoteDriver.LOG.debug("Received client execute statement request");
+    remoteDriver.LOG.debug("Received client get results request");
     //DriverJobWrapper<?> wrapper = new DriverJobWrapper<Serializable>(remoteDriver, msg);
 //    remoteDriver.activeJobs.put(msg.id, wrapper);
     //remoteDriver.submit(wrapper);
     List<String> res = new ArrayList<>();
+    boolean result;
     try {
-      this.queryExecutorService.getResults(res);
+      result = this.queryExecutorService.getResults(res);
+      remoteDriver.LOG.debug("GOT RESULTS OF SIZE " + res.size());
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
-    sendResults(res.toArray(new String[res.size()]));
+    sendResults(res.toArray(new String[res.size()]), result);
   }
 
   // TODO hack for now could be to define an interface with run and getResults method inside the

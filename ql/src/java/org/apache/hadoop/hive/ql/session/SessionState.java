@@ -43,6 +43,7 @@ import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.lang.StringUtils;
@@ -63,7 +64,8 @@ import org.apache.hadoop.hive.metastore.api.ColumnStatisticsObj;
 import org.apache.hadoop.hive.metastore.cache.CachedStore;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.metastore.utils.MetaStoreUtils;
-import org.apache.hadoop.hive.ql.ContainerServiceClient;
+import org.apache.hadoop.hive.ql.RemoteProcessLauncherFactory;
+import org.apache.hadoop.hive.ql.RemoteProcessClient;
 import org.apache.hadoop.hive.ql.MapRedStats;
 import org.apache.hadoop.hive.ql.exec.FunctionInfo;
 import org.apache.hadoop.hive.ql.exec.Registry;
@@ -314,14 +316,29 @@ public class SessionState {
 
   private List<Closeable> cleanupItems = new LinkedList<Closeable>();
 
-  private ContainerServiceClient containerServiceClient;
+  private Lock containerCreatedLock = new ReentrantLock();
+  private RemoteProcessClient remoteProcessClient;
 
-  public ContainerServiceClient getContainerServiceClient() {
-    return this.containerServiceClient;
-  }
-
-  public void setContainerServiceClient(ContainerServiceClient containerServiceClient) {
-    this.containerServiceClient = containerServiceClient;
+  /**
+   * Get or create the {@link RemoteProcessClient} associated with this session.
+   */
+  public RemoteProcessClient getRemoteProcessClient() throws IOException {
+    try {
+      containerCreatedLock.lock();
+      if (remoteProcessClient != null) {
+        return remoteProcessClient;
+      } else {
+        LOG.debug("Creating remote process launcher");
+        getPerfLogger().PerfLogBegin("RemoteProcessLauncher", "launch");
+        remoteProcessClient = RemoteProcessLauncherFactory.getRemoteProcessLauncher(
+                sessionConf).launch();
+        getPerfLogger().PerfLogBegin("RemoteProcessLauncher", "launch");
+        LOG.debug("Remote process launcher successfully launched");
+        return remoteProcessClient;
+      }
+    } finally {
+      containerCreatedLock.unlock();
+    }
   }
 
   public HiveConf getConf() {

@@ -5,7 +5,7 @@ import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import java.io.IOException;
 import java.util.List;
 
-public interface ContainerServiceClient {
+public interface RemoteProcessClient {
 
   CommandProcessorResponse execute(String statement) throws Exception;
 

@@ -34,15 +34,35 @@ import com.google.common.base.Strings;
  */
 public class DriverFactory {
 
+  /**
+   * If {@link HiveConf.ConfVars#HIVE_SERVER2_ENABLE_CONTAINER_SERVICE} is true, return a
+   * {@link RemoteProcessDriver}, else delegate to {@link #newDriver(HiveConf)}.
+   */
+  public static IDriver newRemoteProcessDriver(HiveConf conf) {
+    if (conf.getBoolVar(ConfVars.HIVE_SERVER2_ENABLE_CONTAINER_SERVICE)) {
+      return new RemoteProcessDriver(conf);
+    } else {
+      return newDriver(conf);
+    }
+  }
+
+  /**
+   * If {@link HiveConf.ConfVars#HIVE_SERVER2_ENABLE_CONTAINER_SERVICE} is true, return a
+   * {@link RemoteProcessDriver}, else delegate to {@link #newDriver(QueryState, String, QueryInfo)}.
+   */
+  public static IDriver newRemoteProcessDriver(QueryState queryState, String userName, QueryInfo queryInfo) {
+    if (queryState.getConf().getBoolVar(ConfVars.HIVE_SERVER2_ENABLE_CONTAINER_SERVICE)) {
+      return new RemoteProcessDriver(queryState, userName, queryInfo);
+    } else {
+      return newDriver(queryState, userName, queryInfo);
+    }
+  }
+
   public static IDriver newDriver(HiveConf conf) {
     return newDriver(getNewQueryState(conf), null, null);
   }
 
   public static IDriver newDriver(QueryState queryState, String userName, QueryInfo queryInfo) {
-    if (queryState.getConf().getBoolVar(ConfVars.HIVE_SERVER2_ENABLE_CONTAINER_SERVICE)) {
-      return new RemoteDriver(new Driver(queryState, userName, queryInfo));
-    }
-
     boolean enabled = queryState.getConf().getBoolVar(ConfVars.HIVE_QUERY_REEXECUTION_ENABLED);
     if (!enabled) {
       return new Driver(queryState, userName, queryInfo);

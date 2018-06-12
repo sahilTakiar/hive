@@ -33,11 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hive.ql.ErrorMsg;
-import org.apache.hadoop.hive.ql.exec.spark.HiveSparkAppClient;
-import org.apache.hadoop.hive.ql.exec.spark.HiveSparkAppClientFactory;
 import org.apache.hadoop.hive.ql.exec.spark.HiveSparkClientFactory;
-import org.apache.hadoop.hive.ql.exec.spark.LocalHiveSparkAppClient;
-import org.apache.hadoop.hive.ql.exec.spark.LocalHiveSparkClient;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.session.SessionState;
 import org.slf4j.Logger;
@@ -74,7 +70,6 @@ public class SparkSessionImpl implements SparkSession {
   private HiveConf conf;
   private boolean isOpen;
   private final String sessionId;
-  private HiveSparkAppClient hiveSparkAppClient;
   private HiveSparkClient hiveSparkClient;
   private Path scratchDir;
   private final Object dirLock = new Object();
@@ -90,7 +85,7 @@ public class SparkSessionImpl implements SparkSession {
     this.conf = conf;
     isOpen = true;
     try {
-      hiveSparkAppClient = HiveSparkAppClientFactory.createHiveSparkAppClient(conf, sessionId);
+      hiveSparkClient = HiveSparkClientFactory.createHiveSparkClient(conf, sessionId);
     } catch (Throwable e) {
       // It's possible that user session is closed while creating Spark client.
       HiveException he;
@@ -107,27 +102,26 @@ public class SparkSessionImpl implements SparkSession {
   @Override
   public SparkJobRef submit(DriverContext driverContext, SparkWork sparkWork) throws Exception {
     Preconditions.checkState(isOpen, "Hive on Spark session is not open. Can't submit jobs.");
-    hiveSparkClient = HiveSparkClientFactory.createHiveSparkClient(hiveSparkAppClient);
     return hiveSparkClient.execute(driverContext, sparkWork);
   }
 
-  @Override
-  public CommandProcessorResponse submit(String statement) throws Exception {
-    // TODO - just create a RemoteClient and submit job through there
-    LOG.info("SUBMITTING STATEMENT " + statement);
-    hiveSparkClient = HiveSparkClientFactory.createHiveSparkClient(hiveSparkAppClient);
-    return hiveSparkClient.execute(statement);
-  }
-
-  @Override
-  public boolean getResults(List res) throws IOException {
-    return hiveSparkClient.getResults(res);
-  }
+//  @Override
+//  public CommandProcessorResponse submit(String statement) throws Exception {
+//    // TODO - just create a RemoteClient and submit job through there
+//    LOG.info("SUBMITTING STATEMENT " + statement);
+//    hiveSparkClient = HiveSparkClientFactory.createHiveSparkClient(hiveSparkAppClient);
+//    return hiveSparkClient.execute(statement);
+//  }
+//
+//  @Override
+//  public boolean getResults(List res) throws IOException {
+//    return hiveSparkClient.getResults(res);
+//  }
 
   @Override
   public ObjectPair<Long, Integer> getMemoryAndCores() throws Exception {
-    SparkConf sparkConf = hiveSparkAppClient.getSparkConf();
-    int numExecutors = hiveSparkAppClient.getExecutorCount();
+    SparkConf sparkConf = hiveSparkClient.getSparkConf();
+    int numExecutors = hiveSparkClient.getExecutorCount();
     // at start-up, we may be unable to get number of executors
     if (numExecutors <= 0) {
       return new ObjectPair<Long, Integer>(-1L, -1);
@@ -141,7 +135,7 @@ public class SparkSessionImpl implements SparkSession {
     if (masterURL.startsWith("spark") || masterURL.startsWith("local")) {
       totalCores = sparkConf.contains("spark.default.parallelism") ?
           sparkConf.getInt("spark.default.parallelism", 1) :
-          hiveSparkAppClient.getDefaultParallelism();
+          hiveSparkClient.getDefaultParallelism();
       totalCores = Math.max(totalCores, numExecutors);
     } else {
       int coresPerExecutor = sparkConf.getInt("spark.executor.cores", 1);
@@ -176,16 +170,16 @@ public class SparkSessionImpl implements SparkSession {
   public void close() {
     LOG.info("Trying to close Hive on Spark session {}", sessionId);
     isOpen = false;
-    if (hiveSparkAppClient != null) {
+    if (hiveSparkClient != null) {
       try {
-        hiveSparkAppClient.close();
+        hiveSparkClient.close();
         LOG.info("Hive on Spark session {} successfully closed", sessionId);
         cleanScratchDir();
       } catch (IOException e) {
         LOG.error("Failed to close Hive on Spark session (" + sessionId + ")", e);
       }
     }
-    hiveSparkAppClient = null;
+    hiveSparkClient = null;
   }
 
   private Path createScratchDir() throws IOException {
@@ -283,8 +277,8 @@ public class SparkSessionImpl implements SparkSession {
     return UUID.randomUUID().toString();
   }
 
-  @VisibleForTesting
-  HiveSparkAppClient getHiveSparkAppClient() {
-    return hiveSparkAppClient;
+  @Override
+  public HiveSparkClient getHiveSparkClient() {
+    return hiveSparkClient;
   }
 }

@@ -114,12 +114,12 @@ public class SparkTask extends Task<SparkWork> {
 
     int rc = 0;
     perfLogger = SessionState.getPerfLogger();
-    SparkSession sparkSession = null;
-    SparkSessionManager sparkSessionManager = null;
+//    SparkSession sparkSession = null;
+//    SparkSessionManager sparkSessionManager = null;
     try {
       printConfigInfo();
-      sparkSessionManager = SparkSessionManagerImpl.getInstance();
-      sparkSession = SparkUtilities.getSparkSession(conf, sparkSessionManager);
+//      sparkSessionManager = SparkSessionManagerImpl.getInstance();
+//      sparkSession = SparkUtilities.getSparkSession(conf, sparkSessionManager);
 
       SparkWork sparkWork = getWork();
       sparkWork.setRequiredCounterPrefix(getOperatorCounters());
@@ -215,14 +215,16 @@ public class SparkTask extends Task<SparkWork> {
       }
       finishTime = perfLogger.getEndTime(PerfLogger.SPARK_RUN_JOB);
       Utilities.clearWork(conf);
-      if (sparkSession != null && sparkSessionManager != null) {
-        rc = close(rc);
-        try {
-          sparkSessionManager.returnSession(sparkSession);
-        } catch (HiveException ex) {
-          LOG.error("Failed to return the session to SessionManager", ex);
-        }
-      }
+      // TODO add this back in - doesn't make sense to do this with a remote process driver so
+      // need to factor this out
+//      if (sparkSession != null && sparkSessionManager != null) {
+//        rc = close(rc);
+//        try {
+//          sparkSessionManager.returnSession(sparkSession);
+//        } catch (HiveException ex) {
+//          LOG.error("Failed to return the session to SessionManager", ex);
+//        }
+//      }
     }
     return rc;
   }

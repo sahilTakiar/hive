@@ -225,17 +225,6 @@ public class RemoteDriver {
     }
   }
 
-  public void submit(DriverJobWrapper<?> job) {
-    synchronized (jcLock) {
-      if (jc != null) {
-        job.submit();
-      } else {
-        LOG.info("SparkContext not yet up; adding Hive on Spark job request to the queue.");
-        jobQueue.add(job);
-      }
-    }
-  }
-
   synchronized void shutdown(Throwable error) {
     if (running) {
       if (error == null) {

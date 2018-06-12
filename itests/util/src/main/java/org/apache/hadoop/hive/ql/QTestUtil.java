@@ -1299,7 +1299,7 @@ public class QTestUtil {
     db.getConf().set("hive.server2.materializedviews.registry.impl", "DUMMY");
     HiveMaterializedViewsRegistry.get().init(db);
     db.getConf().set("hive.server2.materializedviews.registry.impl", registryImpl);
-    drv = DriverFactory.newDriver(conf);
+    drv = DriverFactory.newRemoteProcessDriver(conf);
     pd = new ParseDriver();
     sem = new SemanticAnalyzer(queryState);
   }

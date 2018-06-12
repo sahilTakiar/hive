@@ -5,7 +5,7 @@ import java.util.List;
 
 public interface QueryExecutorService {
 
-  void run(String command);
+  void run(String command, byte[] hiveConfBytes);
 
   boolean getResults(List res) throws IOException;
 }
