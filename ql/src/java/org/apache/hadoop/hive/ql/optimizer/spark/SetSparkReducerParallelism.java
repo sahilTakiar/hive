@@ -24,11 +24,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.Stack;
 
-import org.apache.hadoop.hive.ql.exec.spark.HiveSparkClientFactory;
 import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
-import org.apache.hive.spark.client.RemoteDriver;
-import org.apache.spark.SparkConf;
-import org.apache.spark.util.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hive.common.ObjectPair;
@@ -260,67 +256,26 @@ public class SetSparkReducerParallelism implements NodeProcessor {
       return;
     }
 
-    // Is there a way to setSparkSession to the current session? Or I guess get
-    // sparkSession#getMemoryAndCores to use the current context
-
-    // Or could use a custom implementation of SparkSession and SparkSessionManager
-    // TODO implement a cleaner way of doing this - all of this is copied from other classes and
-    // hacked together
-
-    if (context.getConf().getBoolVar(HiveConf.ConfVars.HIVE_SERVER2_ENABLE_CONTAINER_SERVICE)) {
-      int numExecutors = RemoteDriver.getInstance().jc.sc().sc().getExecutorMemoryStatus().size() - 1;
-      SparkConf sparkConf = HiveSparkClientFactory.generateSparkConf(HiveSparkClientFactory
-              .initiateSparkConf(context.getConf(), null));
-
-      int defaultParallelism = RemoteDriver.getInstance().jc.sc().sc().defaultParallelism();
-
-      if (numExecutors <= 0) {
-        sparkMemoryAndCores = new ObjectPair<Long, Integer>(-1L, -1);
-      }
-      int executorMemoryInMB = Utils.memoryStringToMb(
-          sparkConf.get("spark.executor.memory", "512m"));
-      double memoryFraction = 1.0 - sparkConf.getDouble("spark.storage.memoryFraction", 0.6);
-      long totalMemory = (long) (numExecutors * executorMemoryInMB * memoryFraction * 1024 * 1024);
-      int totalCores;
-      String masterURL = sparkConf.get("spark.master");
-      if (masterURL.startsWith("spark") || masterURL.startsWith("local")) {
-        totalCores = sparkConf.contains("spark.default.parallelism") ?
-            sparkConf.getInt("spark.default.parallelism", 1) :
-            defaultParallelism;
-        totalCores = Math.max(totalCores, numExecutors);
-      } else {
-        int coresPerExecutor = sparkConf.getInt("spark.executor.cores", 1);
-        totalCores = numExecutors * coresPerExecutor;
-      }
-      totalCores = totalCores / sparkConf.getInt("spark.task.cpus", 1);
-
-      long memoryPerTaskInBytes = totalMemory / totalCores;
-      LOG.info("Hive on Spark application currently has number of executors: " + numExecutors
-          + ", total cores: " + totalCores + ", memory per executor: "
-          + executorMemoryInMB + " mb, memoryFraction: " + memoryFraction);
-      sparkMemoryAndCores = new ObjectPair<Long, Integer>(Long.valueOf(memoryPerTaskInBytes),
-          Integer.valueOf(totalCores));
-    } else {
-      SparkSessionManager sparkSessionManager = null;
-      SparkSession sparkSession = null;
-      try {
-        sparkSessionManager = SparkSessionManagerImpl.getInstance();
-        sparkSession = SparkUtilities.getSparkSession(
-                context.getConf(), sparkSessionManager);
-        sparkMemoryAndCores = sparkSession.getMemoryAndCores();
-      } catch (HiveException e) {
-        throw new SemanticException("Failed to get a Hive on Spark session", e);
-      } catch (Exception e) {
-        LOG.warn("Failed to get spark memory/core info, reducer parallelism may be inaccurate", e);
-      } finally {
-        if (sparkSession != null && sparkSessionManager != null) {
-          try {
-            sparkSessionManager.returnSession(sparkSession);
-          } catch (HiveException ex) {
-            LOG.error("Failed to return the session to SessionManager: " + ex, ex);
-          }
+    SparkSessionManager sparkSessionManager = null;
+    SparkSession sparkSession = null;
+    try {
+      sparkSessionManager = SparkSessionManagerImpl.getInstance();
+      sparkSession = SparkUtilities.getSparkSession(
+          context.getConf(), sparkSessionManager);
+      sparkMemoryAndCores = sparkSession.getMemoryAndCores();
+    } catch (HiveException e) {
+      throw new SemanticException("Failed to get a Hive on Spark session", e);
+    } catch (Exception e) {
+      LOG.warn("Failed to get spark memory/core info, reducer parallelism may be inaccurate", e);
+    } finally {
+      if (sparkSession != null && sparkSessionManager != null) {
+        try {
+          sparkSessionManager.returnSession(sparkSession);
+        } catch (HiveException ex) {
+          LOG.error("Failed to return the session to SessionManager: " + ex, ex);
         }
       }
     }
   }
+
 }

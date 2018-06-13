@@ -110,7 +110,7 @@ public class SparkSessionImpl implements SparkSession {
 //    // TODO - just create a RemoteClient and submit job through there
 //    LOG.info("SUBMITTING STATEMENT " + statement);
 //    hiveSparkClient = HiveSparkClientFactory.createHiveSparkClient(hiveSparkAppClient);
-//    return hiveSparkClient.execute(statement);
+//    return hiveSparkClient.run(statement);
 //  }
 //
 //  @Override

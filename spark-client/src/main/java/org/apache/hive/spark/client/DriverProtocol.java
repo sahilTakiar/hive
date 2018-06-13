@@ -1,46 +1,48 @@
 package org.apache.hive.spark.client;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.Maps;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.hive.spark.client.metrics.Metrics;
 import org.apache.hive.spark.counter.SparkCounters;
 import org.apache.spark.api.java.JavaFutureAction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
 
 class DriverProtocol extends BaseProtocol {
 
+  private static final Logger LOG = LoggerFactory.getLogger(DriverProtocol.class);
+
   private final RemoteDriver remoteDriver;
-  private final QueryExecutorService queryExecutorService;
+  private final RemoteProcessDriverExecutorFactory remoteProcessDriverExecutorFactory;
+  private final Map<String, RemoteProcessDriverExecutor> commands = Maps.newConcurrentMap();
 
   DriverProtocol(RemoteDriver remoteDriver) {
     this.remoteDriver = remoteDriver;
-    try {
-      this.queryExecutorService = (QueryExecutorService) Class.forName("org.apache.hadoop.hive" +
-            ".ql.exec.spark.RemoteDriverQueryExecutorService").newInstance();
-    } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
-      throw new RuntimeException(e);
-    }
+    this.remoteProcessDriverExecutorFactory = createRemoteProcessDriverExecutorFactory();
   }
 
   Future<Void> sendError(Throwable error) {
-    remoteDriver.LOG.debug("Send error to Client: {}", Throwables.getStackTraceAsString(error));
+    LOG.debug("Send error to Client: {}", Throwables.getStackTraceAsString(error));
     return remoteDriver.clientRpc.call(new Error(Throwables.getStackTraceAsString(error)));
   }
 
   Future<Void> sendErrorMessage(String cause) {
-    remoteDriver.LOG.debug("Send error to Client: {}", cause);
+    LOG.debug("Send error to Client: {}", cause);
     return remoteDriver.clientRpc.call(new Error(cause));
   }
 
   <T extends Serializable> Future<Void> jobFinished(String jobId, T result,
                                             Throwable error, SparkCounters counters) {
-    remoteDriver.LOG.debug("Send job({}) result to Client.", jobId);
+    LOG.debug("Send job({}) result to Client.", jobId);
     return remoteDriver.clientRpc.call(new JobResult(jobId, result, error, counters));
   }
 
@@ -49,70 +51,33 @@ class DriverProtocol extends BaseProtocol {
   }
 
   Future<Void> jobSubmitted(String jobId, int sparkJobId) {
-    remoteDriver.LOG.debug("Send job({}/{}) submitted to Client.", jobId, sparkJobId);
+    LOG.debug("Send job({}/{}) submitted to Client.", jobId, sparkJobId);
     return remoteDriver.clientRpc.call(new JobSubmitted(jobId, sparkJobId));
   }
 
   Future<Void> sendMetrics(String jobId, int sparkJobId, int stageId, long taskId, Metrics metrics) {
-    remoteDriver.LOG.debug("Send task({}/{}/{}/{}) metric to Client.", jobId, sparkJobId, stageId, taskId);
+    LOG.debug("Send task({}/{}/{}/{}) metric to Client.", jobId, sparkJobId, stageId, taskId);
     return remoteDriver.clientRpc.call(new JobMetrics(jobId, sparkJobId, stageId, taskId, metrics));
-  }
-
-  void sendResults(String[] res, boolean result) {
-    remoteDriver.clientRpc.call(new SendResults(res, result));
   }
 
   private void handle(ChannelHandlerContext ctx, CancelJob msg) {
     JobWrapper<?> job = remoteDriver.activeJobs.get(msg.id);
     if (job == null || !remoteDriver.cancelJob(job)) {
-      remoteDriver.LOG.info("Requested to cancel an already finished client job.");
+      LOG.info("Requested to cancel an already finished client job.");
     }
   }
 
   private void handle(ChannelHandlerContext ctx, EndSession msg) {
-    remoteDriver.LOG.debug("Shutting down due to EndSession request.");
+    LOG.debug("Shutting down due to EndSession request.");
     remoteDriver.shutdown(null);
   }
 
   private void handle(ChannelHandlerContext ctx, JobRequest msg) {
-    remoteDriver.LOG.debug("Received client job request {}", msg.id);
+    LOG.debug("Received client job request {}", msg.id);
     JobWrapper<?> wrapper = new JobWrapper<Serializable>(remoteDriver, msg);
     remoteDriver.activeJobs.put(msg.id, wrapper);
     remoteDriver.submit(wrapper);
   }
-
-  private void handle(ChannelHandlerContext ctx, ExecuteStatement msg) {
-    remoteDriver.LOG.debug("Received client execute statement request");
-    //DriverJobWrapper<?> wrapper = new DriverJobWrapper<Serializable>(remoteDriver, msg);
-//    remoteDriver.activeJobs.put(msg.id, wrapper);
-    //remoteDriver.submit(wrapper);
-    this.queryExecutorService.run(msg.statement, msg.hiveConfBytes);
-  }
-
-  private void handle(ChannelHandlerContext ctx, GetResults msg) {
-    remoteDriver.LOG.debug("Received client get results request");
-    //DriverJobWrapper<?> wrapper = new DriverJobWrapper<Serializable>(remoteDriver, msg);
-//    remoteDriver.activeJobs.put(msg.id, wrapper);
-    //remoteDriver.submit(wrapper);
-    List<String> res = new ArrayList<>();
-    boolean result;
-    try {
-      result = this.queryExecutorService.getResults(res);
-      remoteDriver.LOG.debug("GOT RESULTS OF SIZE " + res.size());
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    sendResults(res.toArray(new String[res.size()]), result);
-  }
-
-  // TODO hack for now could be to define an interface with run and getResults method inside the
-  // spark-client module; then ExecuteStatement would have this interface as a parameter and then
-  // implementation inside ql would be to cache the driver, then the driver protocol cause the
-  // interface and calls getResults when the request is made
-
-  // TODO would should be the long term fix for this? basically need a way to launch a Driver in
-  // the spark-client library using classes from the ql library - the above solution actually
-  // makes a lot of sense
 
   private Object handle(ChannelHandlerContext ctx, SyncJobRequest msg) throws Exception {
     // In case the job context is not up yet, let's wait, since this is supposed to be a
@@ -140,6 +105,47 @@ class DriverProtocol extends BaseProtocol {
       return msg.job.call(remoteDriver.jc);
     } finally {
       remoteDriver.jc.setMonitorCb(null);
+    }
+  }
+
+  // We define the protocol for the RemoteProcessDriver in the same class because the underlying
+  // RPC implementation only supports specifying a single RpcDispatcher and it doesn't support
+  // polymorphism
+
+  private void handle(ChannelHandlerContext ctx, RunCommand msg) {
+    LOG.debug("Received client run command request for query id " + msg.queryId);
+
+    remoteDriver.submit(() -> {
+      RemoteProcessDriverExecutor remoteProcessDriverExecutor = remoteProcessDriverExecutorFactory.createRemoteProcessDriverExecutor(
+              msg.command, msg.hiveConfBytes, msg.queryId);
+      commands.put(msg.queryId, remoteProcessDriverExecutor);
+      Exception commandProcessorResponse = remoteProcessDriverExecutor.run(msg.command);
+      remoteDriver.clientRpc.call(new CommandProcessorResponseMessage(msg
+              .queryId, commandProcessorResponse));
+    });
+  }
+
+  private void handle(ChannelHandlerContext ctx, GetResults msg) {
+    LOG.debug("Received client get results request");
+
+    remoteDriver.submit(() -> {
+      List res = new ArrayList();
+      try {
+        boolean moreResults = commands.get(msg.queryId).getResults(res);
+        remoteDriver.clientRpc.call(new CommandResults(res, msg.queryId, moreResults));
+      } catch (IOException e) {
+        // TODO how are exceptions handled?
+        throw new RuntimeException(e);
+      }
+    });
+  }
+
+  private RemoteProcessDriverExecutorFactory createRemoteProcessDriverExecutorFactory() {
+    try {
+      return (RemoteProcessDriverExecutorFactory) Class.forName("org.apache.hadoop.hive.ql.exec" +
+              ".spark.RemoteProcessDriverExecutorFactoryImpl").newInstance();
+    } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
+      throw new RuntimeException(e);
     }
   }
 

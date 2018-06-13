@@ -202,7 +202,7 @@ public class RemoteHiveSparkClient implements HiveSparkClient {
   }
 
 //  @Override
-//  public CommandProcessorResponse execute(final String statement) {
+//  public CommandProcessorResponse run(final String statement) {
 //    LOG.info("REMOTEHIVESPARKCLIENT SUBMITTING " + statement);
 //    byte[] hiveConfBytes = KryoSerializer.serializeHiveConf(hiveConf);
 //    return this.remoteDriverSparkClient.run(statement, hiveConfBytes);

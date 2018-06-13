@@ -191,7 +191,7 @@ public class SparkTask extends Task<SparkWork> {
       }
       sparkJobStatus.cleanup();
     } catch (Exception e) {
-      String msg = "Failed to execute Spark task " + getId() + ", with exception '" + Utilities.getNameMessage(e) + "'";
+      String msg = "Failed to run Spark task " + getId() + ", with exception '" + Utilities.getNameMessage(e) + "'";
 
       // Has to use full name to make sure it does not conflict with
       // org.apache.commons.lang.StringUtils
@@ -368,7 +368,7 @@ public class SparkTask extends Task<SparkWork> {
         }
       }
     } catch (Exception e) {
-      // jobClose needs to execute successfully otherwise fail task
+      // jobClose needs to run successfully otherwise fail task
       if (rc == 0) {
         rc = 3;
         String mesg = "Job Commit failed with exception '"

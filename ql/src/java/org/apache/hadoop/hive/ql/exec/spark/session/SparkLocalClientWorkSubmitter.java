@@ -91,6 +91,6 @@ public class SparkLocalClientWorkSubmitter implements SparkWorkSubmitter {
 //      public void cancel(String jobId) {
 //
 //      }
-//    }).execute(driverContext, sparkWork);
+//    }).run(driverContext, sparkWork);
   }
 }

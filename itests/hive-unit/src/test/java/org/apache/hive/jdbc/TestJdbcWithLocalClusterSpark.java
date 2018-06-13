@@ -106,8 +106,8 @@ public class TestJdbcWithLocalClusterSpark {
     Connection conn = DriverManager.
         getConnection(miniHS2.getJdbcURL(), System.getProperty("user.name"), "bar");
     Statement stmt2 = conn.createStatement();
-//    stmt2.execute("DROP DATABASE IF EXISTS " + dbName + " CASCADE");
-//    stmt2.execute("CREATE DATABASE " + dbName);
+//    stmt2.run("DROP DATABASE IF EXISTS " + dbName + " CASCADE");
+//    stmt2.run("CREATE DATABASE " + dbName);
     stmt2.close();
     conn.close();
   }
@@ -117,7 +117,7 @@ public class TestJdbcWithLocalClusterSpark {
     hs2Conn = DriverManager.getConnection(miniHS2.getJdbcURL(dbName),
         System.getProperty("user.name"), "bar");
     stmt = hs2Conn.createStatement();
-    //stmt.execute("USE " + dbName);
+    //stmt.run("USE " + dbName);
   }
 
   @After

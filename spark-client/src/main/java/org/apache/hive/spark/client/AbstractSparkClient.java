@@ -25,7 +25,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 
 import java.io.ByteArrayInputStream;
@@ -74,7 +73,7 @@ abstract class AbstractSparkClient implements SparkClient {
 
   private static final long serialVersionUID = 1L;
 
-  static final Logger LOG = LoggerFactory.getLogger(AbstractSparkClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractSparkClient.class);
 
   private static final long DEFAULT_SHUTDOWN_TIMEOUT = 10000; // In milliseconds
 
@@ -88,8 +87,7 @@ abstract class AbstractSparkClient implements SparkClient {
   protected final Map<String, String> conf;
   private final HiveConf hiveConf;
   private final Future<Void> driverFuture;
-  final Map<String, JobHandleImpl<?>> jobs;
-  final Rpc driverRpc;
+  private Rpc driverRpc;
   private final ClientProtocol protocol;
   protected volatile boolean isAlive;
 
@@ -97,11 +95,10 @@ abstract class AbstractSparkClient implements SparkClient {
                   String sessionid) throws IOException {
     this.conf = conf;
     this.hiveConf = hiveConf;
-    this.jobs = Maps.newConcurrentMap();
 
     String secret = rpcServer.createSecret();
     this.driverFuture = startDriver(rpcServer, sessionid, secret);
-    this.protocol = new ClientProtocol(this);
+    this.protocol = new ClientProtocol(this, this.driverRpc);
 
     try {
       // The RPC server will take care of timeouts here.
@@ -152,8 +149,7 @@ abstract class AbstractSparkClient implements SparkClient {
 
   @Override
   public <T extends Serializable> JobHandle<T> submit(Job<T> job) {
-    LOG.info("SUBMITTING JOB");
-    return protocol.submit(job, Collections.<JobHandle.Listener<T>>emptyList());
+    return protocol.submit(job, Collections.emptyList());
   }
 
   @Override
@@ -220,6 +216,11 @@ abstract class AbstractSparkClient implements SparkClient {
   @Override
   public void cancel(String jobId) {
     protocol.cancel(jobId);
+  }
+
+  @Override
+  public ClientProtocol getClientProtocol() {
+    return this.protocol;
   }
 
   private Future<Void> startDriver(final RpcServer rpcServer, final String clientId,
@@ -391,10 +392,10 @@ abstract class AbstractSparkClient implements SparkClient {
     return launchDriver(isTesting, rpcServer, clientId);
   }
 
-  @Override
-  public ClientProtocol getClientProtocol() {
-    return this.protocol;
-  }
+//  @Override
+//  public ClientProtocol getClientProtocol() {
+//    return this.protocol;
+//  }
 
   protected abstract Future<Void> launchDriver(String isTesting, RpcServer rpcServer, String
           clientId) throws IOException;

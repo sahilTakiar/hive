@@ -190,7 +190,7 @@ public class SQLOperation extends ExecuteStatementOperation {
       driver.setOperationId(guid64);
 
       // In Hive server mode, we are not able to retry in the FetchTask
-      // case, when calling fetch queries since execute() has returned.
+      // case, when calling fetch queries since run() has returned.
       // For now, we disable the test attempts.
       response = driver.compileAndRespond(statement);
       if (0 != response.getResponseCode()) {
@@ -217,7 +217,7 @@ public class SQLOperation extends ExecuteStatementOperation {
         return;
       }
       // In Hive server mode, we are not able to retry in the FetchTask
-      // case, when calling fetch queries since execute() has returned.
+      // case, when calling fetch queries since run() has returned.
       // For now, we disable the test attempts.
       response = driver.run();
       if (0 != response.getResponseCode()) {

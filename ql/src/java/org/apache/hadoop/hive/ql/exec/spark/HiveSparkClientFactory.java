@@ -236,7 +236,7 @@ public class HiveSparkClientFactory {
 
 
     // Set the credential provider passwords if found, if there is job specific password
-    // the credential provider location is set directly in the execute method of LocalSparkClient
+    // the credential provider location is set directly in the run method of LocalSparkClient
     // and submit method of RemoteHiveSparkClient when the job config is created
     String password = HiveConfUtil.getJobCredentialProviderPassword(hiveConf);
     if(password != null) {

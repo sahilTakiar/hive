@@ -18,10 +18,12 @@
 
 package org.apache.hadoop.hive.ql;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
+import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.reexec.IReExecutionPlugin;
 import org.apache.hadoop.hive.ql.reexec.ReExecDriver;
 import org.apache.hadoop.hive.ql.reexec.ReExecutionOverlayPlugin;
@@ -38,7 +40,7 @@ public class DriverFactory {
    * If {@link HiveConf.ConfVars#HIVE_SERVER2_ENABLE_CONTAINER_SERVICE} is true, return a
    * {@link RemoteProcessDriver}, else delegate to {@link #newDriver(HiveConf)}.
    */
-  public static IDriver newRemoteProcessDriver(HiveConf conf) {
+  public static IDriver newRemoteProcessDriver(HiveConf conf) throws IOException, HiveException {
     if (conf.getBoolVar(ConfVars.HIVE_SERVER2_ENABLE_CONTAINER_SERVICE)) {
       return new RemoteProcessDriver(conf);
     } else {
@@ -50,7 +52,7 @@ public class DriverFactory {
    * If {@link HiveConf.ConfVars#HIVE_SERVER2_ENABLE_CONTAINER_SERVICE} is true, return a
    * {@link RemoteProcessDriver}, else delegate to {@link #newDriver(QueryState, String, QueryInfo)}.
    */
-  public static IDriver newRemoteProcessDriver(QueryState queryState, String userName, QueryInfo queryInfo) {
+  public static IDriver newRemoteProcessDriver(QueryState queryState, String userName, QueryInfo queryInfo) throws IOException, HiveException {
     if (queryState.getConf().getBoolVar(ConfVars.HIVE_SERVER2_ENABLE_CONTAINER_SERVICE)) {
       return new RemoteProcessDriver(queryState, userName, queryInfo);
     } else {

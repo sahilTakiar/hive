@@ -17,6 +17,7 @@
  */
 
 package org.apache.hadoop.hive.ql.session;
+
 import static org.apache.hadoop.hive.metastore.Warehouse.DEFAULT_DATABASE_NAME;
 
 import java.io.Closeable;
@@ -65,7 +66,6 @@ import org.apache.hadoop.hive.metastore.cache.CachedStore;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.metastore.utils.MetaStoreUtils;
 import org.apache.hadoop.hive.ql.RemoteProcessLauncherFactory;
-import org.apache.hadoop.hive.ql.RemoteProcessClient;
 import org.apache.hadoop.hive.ql.MapRedStats;
 import org.apache.hadoop.hive.ql.exec.FunctionInfo;
 import org.apache.hadoop.hive.ql.exec.Registry;
@@ -114,6 +114,7 @@ import com.google.common.collect.Maps;
  * configuration information
  */
 public class SessionState {
+
   private static final Logger LOG = LoggerFactory.getLogger(SessionState.class);
 
   private static final String TMP_PREFIX = "_tmp_space.db";
@@ -316,28 +317,26 @@ public class SessionState {
 
   private List<Closeable> cleanupItems = new LinkedList<Closeable>();
 
-  private Lock containerCreatedLock = new ReentrantLock();
-  private RemoteProcessClient remoteProcessClient;
+  private final AtomicBoolean launchedRemoteProcess = new AtomicBoolean();
 
   /**
-   * Get or create the {@link RemoteProcessClient} associated with this session.
+   * Launch the {@link org.apache.hadoop.hive.ql.RemoteProcessLauncher} if it hasn't been
+   * launched yet.
    */
-  public RemoteProcessClient getRemoteProcessClient() throws IOException {
-    try {
-      containerCreatedLock.lock();
-      if (remoteProcessClient != null) {
-        return remoteProcessClient;
-      } else {
-        LOG.debug("Creating remote process launcher");
-        getPerfLogger().PerfLogBegin("RemoteProcessLauncher", "launch");
-        remoteProcessClient = RemoteProcessLauncherFactory.getRemoteProcessLauncher(
-                sessionConf).launch();
-        getPerfLogger().PerfLogBegin("RemoteProcessLauncher", "launch");
-        LOG.debug("Remote process launcher successfully launched");
-        return remoteProcessClient;
+  public void launchRemoteProcess() throws IOException, HiveException {
+    if (!launchedRemoteProcess.get()) {
+      synchronized (launchedRemoteProcess) {
+        if (!launchedRemoteProcess.get()) {
+          LOG.debug("Creating remote process launcher");
+
+          getPerfLogger().PerfLogBegin("RemoteProcessLauncher", "launch");
+          RemoteProcessLauncherFactory.getRemoteProcessLauncher(sessionConf).launch();
+          getPerfLogger().PerfLogBegin("RemoteProcessLauncher", "launch");
+
+          LOG.debug("Remote process launcher successfully launched");
+          Preconditions.checkState(launchedRemoteProcess.compareAndSet(false, true));
+        }
       }
-    } finally {
-      containerCreatedLock.unlock();
     }
   }
 

@@ -13,19 +13,21 @@ import java.util.List;
 
 public class SparkRemoteProcessClient implements RemoteProcessClient {
 
+  private final String queryId;
   private final HiveConf hiveConf;
   private final RemoteProcessHiveSparkClient hiveSparkClient;
   private PerfLogger perfLogger;
 
-  SparkRemoteProcessClient(HiveConf hiveConf,
+  SparkRemoteProcessClient(String queryId, HiveConf hiveConf,
                            RemoteProcessHiveSparkClient hiveSparkClient) {
+    this.queryId = queryId;
     this.hiveConf = hiveConf;
     this.hiveSparkClient = hiveSparkClient;
     this.perfLogger = SessionState.getPerfLogger();
   }
 
   @Override
-  public CommandProcessorResponse execute(String statement) {
+  public CommandProcessorResponse run(String statement) {
     this.perfLogger.PerfLogBegin(getClass().getSimpleName(), "serializeHiveConf");
     byte[] hiveConfBytes = KryoSerializer.serializeHiveConf(hiveConf);
     this.perfLogger.PerfLogEnd(getClass().getSimpleName(), "serializeHiveConf");

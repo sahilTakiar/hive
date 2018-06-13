@@ -3,6 +3,7 @@ package org.apache.hadoop.hive.ql;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.Schema;
 import org.apache.hadoop.hive.ql.exec.FetchTask;
+import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.session.SessionState;
 
@@ -19,17 +20,19 @@ public class RemoteProcessDriver implements IDriver {
   private final QueryState queryState;
   private final String userName;
   private final QueryInfo queryInfo;
+  private final RemoteProcessClient remoteProcessClient;
 
-  public RemoteProcessDriver(HiveConf hiveConf) {
+  public RemoteProcessDriver(HiveConf hiveConf) throws IOException, HiveException {
     this(new QueryState.Builder().withGenerateNewQueryId(true).withHiveConf(hiveConf).build(), null,
             null);
   }
 
-  public RemoteProcessDriver(QueryState queryState, String userName, QueryInfo queryInfo) {
+  public RemoteProcessDriver(QueryState queryState, String userName, QueryInfo queryInfo) throws IOException, HiveException {
     this.hiveConf = queryState.getConf();
     this.queryState = queryState;
     this.userName = userName;
     this.queryInfo = queryInfo;
+    this.remoteProcessClient = createRemoteProcessClient(queryState.getConf(), queryState.getQueryId());
   }
 
   @Override
@@ -65,7 +68,7 @@ public class RemoteProcessDriver implements IDriver {
   @Override
   public CommandProcessorResponse run(String command) {
     try {
-      return getRemoteProcessClient().execute(command);
+      return this.remoteProcessClient.run(command);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
@@ -73,7 +76,7 @@ public class RemoteProcessDriver implements IDriver {
 
   @Override
   public boolean getResults(List res) throws IOException {
-    return getRemoteProcessClient().getResults(res);
+    return this.remoteProcessClient.getResults(res);
   }
 
   @Override
@@ -132,10 +135,9 @@ public class RemoteProcessDriver implements IDriver {
     return false;
   }
 
-  /**
-   * Get or create the {@link RemoteProcessClient} associated with this session.
-   */
-  private RemoteProcessClient getRemoteProcessClient() throws IOException {
-    return SessionState.get().getRemoteProcessClient();
+  private RemoteProcessClient createRemoteProcessClient(HiveConf hiveConf,
+                                                        String queryId) throws IOException, HiveException {
+    SessionState.get().launchRemoteProcess();
+    return RemoteProcessClientFactory.createRemoteProcessClient(hiveConf, queryId);
   }
 }

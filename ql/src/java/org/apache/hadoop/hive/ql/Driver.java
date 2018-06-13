@@ -195,7 +195,7 @@ public class Driver implements IDriver {
   // Query specific info
   private final QueryState queryState;
 
-  // Query hooks that execute before compilation and after execution
+  // Query hooks that run before compilation and after execution
   private HookRunner hookRunner;
 
   // Transaction manager the Driver has been initialized with (can be null).
@@ -1919,7 +1919,7 @@ public class Driver implements IDriver {
     try {
       HiveDriverRunHookContext hookContext = new HiveDriverRunHookContextImpl(conf,
           alreadyCompiled ? ctx.getCmd() : command);
-      // Get all the driver run hooks and pre-execute them.
+      // Get all the driver run hooks and pre-run them.
       try {
         hookRunner.runPreDriverHooks(hookContext);
       } catch (Exception e) {
@@ -2021,7 +2021,7 @@ public class Driver implements IDriver {
       queryDisplay.setPerfLogStarts(QueryDisplay.Phase.EXECUTION, perfLogger.getStartTimes());
       queryDisplay.setPerfLogEnds(QueryDisplay.Phase.EXECUTION, perfLogger.getEndTimes());
 
-      // Take all the driver run hooks and post-execute them.
+      // Take all the driver run hooks and post-run them.
       try {
         hookRunner.runPostDriverHooks(hookContext);
       } catch (Exception e) {
@@ -2223,7 +2223,7 @@ public class Driver implements IDriver {
     lDrvState.stateLock.lock();
     try {
       // if query is not in compiled state, or executing state which is carried over from
-      // a combined compile/execute in runInternal, throws the error
+      // a combined compile/run in runInternal, throws the error
       if (lDrvState.driverState != DriverState.COMPILED &&
           lDrvState.driverState != DriverState.EXECUTING) {
         SQLState = "HY008";
@@ -2246,7 +2246,7 @@ public class Driver implements IDriver {
 
     try {
       LOG.info("Executing command(queryId=" + queryId + "): " + queryStr);
-      // compile and execute can get called from different threads in case of HS2
+      // compile and run can get called from different threads in case of HS2
       // so clear timing in this thread's Hive object before proceeding.
       Hive.get().clearMetaCallTiming();
 
@@ -2624,7 +2624,7 @@ public class Driver implements IDriver {
     hookContext.setHookType(HookContext.HookType.ON_FAILURE_HOOK);
     hookContext.setErrorMessage(errorMessage);
     hookContext.setException(exception);
-    // Get all the failure execution hooks and execute them.
+    // Get all the failure execution hooks and run them.
     hookRunner.runFailureHooks(hookContext);
   }
 

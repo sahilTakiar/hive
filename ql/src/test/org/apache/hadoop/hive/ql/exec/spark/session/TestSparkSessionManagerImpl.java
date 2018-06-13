@@ -18,7 +18,6 @@
 package org.apache.hadoop.hive.ql.exec.spark.session;
 
 import org.apache.hadoop.hive.ql.ErrorMsg;
-import org.apache.hadoop.hive.ql.exec.spark.HiveSparkClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hive.conf.HiveConf;
@@ -31,6 +30,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.hadoop.hive.ql.exec.spark.HiveSparkClient;
 import org.apache.hadoop.hive.ql.exec.spark.HiveSparkClientFactory;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.spark.SparkConf;

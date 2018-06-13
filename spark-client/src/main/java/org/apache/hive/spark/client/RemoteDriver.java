@@ -214,7 +214,7 @@ public class RemoteDriver {
     }
   }
 
-  public void submit(JobWrapper<?> job) {
+  public void submit(Submittable job) {
     synchronized (jcLock) {
       if (jc != null) {
         job.submit();

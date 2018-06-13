@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.concurrent.Future;
 
 import org.apache.hadoop.hive.common.classification.InterfaceAudience;
+import org.apache.hive.spark.client.rpc.Rpc;
 
 /**
  * Defines the API for the Spark remote client.

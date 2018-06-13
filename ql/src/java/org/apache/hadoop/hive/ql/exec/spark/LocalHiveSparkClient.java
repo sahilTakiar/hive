@@ -60,7 +60,7 @@ import com.google.common.base.Strings;
 
 /**
  * LocalSparkClient submit Spark job in local driver, it's responsible for build spark client
- * environment and execute spark work.
+ * environment and run spark work.
  */
 public class LocalHiveSparkClient implements HiveSparkClient {
   private static final long serialVersionUID = 1L;

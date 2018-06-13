@@ -1567,7 +1567,7 @@ public class QTestUtil {
         throw new RuntimeException("Could not get CommandProcessor for command: " + commandName);
       }
     } catch (Exception e) {
-      throw new RuntimeException("Could not execute test command", e);
+      throw new RuntimeException("Could not run test command", e);
     }
   }
 
@@ -2061,7 +2061,7 @@ public class QTestUtil {
   }
 
   /**
-   * Setup to execute a set of query files. Uses QTestUtil to do so.
+   * Setup to run a set of query files. Uses QTestUtil to do so.
    *
    * @param qfiles
    *          array of input query files containing arbitrary number of hive

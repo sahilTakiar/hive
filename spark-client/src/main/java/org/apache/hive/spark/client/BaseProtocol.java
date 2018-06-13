@@ -25,11 +25,11 @@ import org.apache.hive.spark.client.rpc.RpcDispatcher;
 import org.apache.hive.spark.counter.SparkCounters;
 
 
-public abstract class BaseProtocol extends RpcDispatcher {
+abstract class BaseProtocol extends RpcDispatcher {
 
   protected static class CancelJob implements Serializable {
 
-    public final String id;
+    final String id;
 
     CancelJob(String id) {
       this.id = id;
@@ -59,7 +59,7 @@ public abstract class BaseProtocol extends RpcDispatcher {
 
     final String cause;
 
-    public Error(String cause) {
+    Error(String cause) {
       this.cause = cause;
     }
 
@@ -83,7 +83,7 @@ public abstract class BaseProtocol extends RpcDispatcher {
     final long taskId;
     final Metrics metrics;
 
-    public JobMetrics(String jobId, int sparkJobId, int stageId, long taskId, Metrics metrics) {
+    JobMetrics(String jobId, int sparkJobId, int stageId, long taskId, Metrics metrics) {
       this.jobId = jobId;
       this.sparkJobId = sparkJobId;
       this.stageId = stageId;
@@ -112,7 +112,7 @@ public abstract class BaseProtocol extends RpcDispatcher {
     public final String id;
     final Job<T> job;
 
-    public JobRequest(String id, Job<T> job) {
+    JobRequest(String id, Job<T> job) {
       this.id = id;
       this.job = job;
     }
@@ -137,7 +137,7 @@ public abstract class BaseProtocol extends RpcDispatcher {
     final Throwable error;
     final SparkCounters sparkCounters;
 
-    public JobResult(String id, T result, Throwable error, SparkCounters sparkCounters) {
+    JobResult(String id, T result, Throwable error, SparkCounters sparkCounters) {
       this.id = id;
       this.result = result;
       this.error = error;
@@ -163,7 +163,7 @@ public abstract class BaseProtocol extends RpcDispatcher {
 
     final String id;
 
-    public JobStarted(String id) {
+    JobStarted(String id) {
       this.id = id;
     }
 
@@ -186,7 +186,7 @@ public abstract class BaseProtocol extends RpcDispatcher {
     final String clientJobId;
     final int sparkJobId;
 
-    public JobSubmitted(String clientJobId, int sparkJobId) {
+    JobSubmitted(String clientJobId, int sparkJobId) {
       this.clientJobId = clientJobId;
       this.sparkJobId = sparkJobId;
     }
@@ -206,7 +206,7 @@ public abstract class BaseProtocol extends RpcDispatcher {
 
   protected static class SyncJobRequest<T extends Serializable> implements Serializable {
 
-    public final Job<T> job;
+    final Job<T> job;
 
     SyncJobRequest(Job<T> job) {
       this.job = job;
@@ -224,23 +224,49 @@ public abstract class BaseProtocol extends RpcDispatcher {
     }
   }
 
-  public static class ExecuteStatement implements Serializable {
+  protected static class RunCommand implements Serializable {
 
-    public final String statement;
-    public final byte[] hiveConfBytes;
+    final String command;
+    final byte[] hiveConfBytes;
+    final String queryId;
 
-    ExecuteStatement(String statement, byte[] hiveConfBytes) {
-      this.statement = statement;
+    RunCommand(String command, byte[] hiveConfBytes, String queryId) {
+      this.command = command;
       this.hiveConfBytes = hiveConfBytes;
+      this.queryId = queryId;
     }
   }
 
-  protected static class QueryResults implements Serializable {
+  protected static class GetResults implements Serializable {
 
-    final String[] results;
+    final String queryId;
 
-    QueryResults(String[] results) {
-      this.results = results;
+    GetResults(String queryId) {
+      this.queryId = queryId;
+    }
+  }
+
+  protected static class CommandResults implements Serializable {
+
+    final List res;
+    final String queryId;
+    final boolean moreResults;
+
+    CommandResults(List res, String queryId, boolean moreResults) {
+      this.res = res;
+      this.queryId = queryId;
+      this.moreResults = moreResults;
+    }
+  }
+
+  protected static class CommandProcessorResponseMessage implements Serializable {
+
+    final String queryId;
+    final Exception commandProcessorResponse;
+
+    CommandProcessorResponseMessage(String queryId, Exception commandProcessorResponse) {
+      this.queryId = queryId;
+      this.commandProcessorResponse = commandProcessorResponse;
     }
   }
 }
