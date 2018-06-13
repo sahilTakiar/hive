@@ -237,6 +237,66 @@ public abstract class BaseProtocol extends RpcDispatcher {
     }
   }
 
+  protected static class HasResultSet implements Serializable {
+
+    final String queryId;
+
+    HasResultSet(String queryId) {
+      this.queryId = queryId;
+    }
+  }
+
+  protected static class GetSchema implements Serializable {
+
+    final String queryId;
+
+    GetSchema(String queryId) {
+      this.queryId = queryId;
+    }
+  }
+
+  protected static class IsFetchingTable implements Serializable {
+
+    final String queryId;
+
+    IsFetchingTable(String queryId) {
+      this.queryId = queryId;
+    }
+  }
+
+  protected static class GetSchemaResponse implements Serializable {
+
+    final String queryId;
+    final byte[] schema;
+
+    GetSchemaResponse(String queryId, byte[] schema) {
+      this.queryId = queryId;
+      this.schema = schema;
+    }
+  }
+
+  protected static class HasResultSetResponse implements Serializable {
+
+    final String queryId;
+    final boolean hasResultSet;
+
+    HasResultSetResponse(String queryId, boolean hasResultSet) {
+      this.queryId = queryId;
+      this.hasResultSet = hasResultSet;
+    }
+  }
+
+  protected static class IsFetchingTableResponse implements Serializable {
+
+    final String queryId;
+    final boolean isFetchingTableResponse;
+
+    IsFetchingTableResponse(String queryId, boolean isFetchingTableResponse) {
+      this.queryId = queryId;
+      this.isFetchingTableResponse = isFetchingTableResponse;
+    }
+  }
+
   protected static class CompileCommand implements Serializable {
 
     final String command;

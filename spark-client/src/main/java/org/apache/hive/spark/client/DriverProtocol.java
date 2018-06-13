@@ -15,6 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 class DriverProtocol extends BaseProtocol {
@@ -24,6 +26,7 @@ class DriverProtocol extends BaseProtocol {
   private final RemoteDriver remoteDriver;
   private final RemoteProcessDriverExecutorFactory remoteProcessDriverExecutorFactory;
   private final Map<String, RemoteProcessDriverExecutor> commands = Maps.newConcurrentMap();
+  private final ExecutorService es = Executors.newSingleThreadExecutor();
 
   DriverProtocol(RemoteDriver remoteDriver) {
     this.remoteDriver = remoteDriver;
@@ -119,29 +122,35 @@ class DriverProtocol extends BaseProtocol {
     // directly invoked
     if (msg.command != null) {
       remoteDriver.submit(() -> {
-        RemoteProcessDriverExecutor remoteProcessDriverExecutor = remoteProcessDriverExecutorFactory.createRemoteProcessDriverExecutor(
-                msg.command, msg.hiveConfBytes, msg.queryId);
-        commands.put(msg.queryId, remoteProcessDriverExecutor);
-        Exception commandProcessorResponse = remoteProcessDriverExecutor.run(msg.command);
-        remoteDriver.clientRpc.call(new CommandProcessorResponseMessage(msg
-                .queryId, commandProcessorResponse));
+        es.submit(() -> {
+          RemoteProcessDriverExecutor remoteProcessDriverExecutor = remoteProcessDriverExecutorFactory.createRemoteProcessDriverExecutor(
+                  msg.command, msg.hiveConfBytes, msg.queryId);
+          commands.put(msg.queryId, remoteProcessDriverExecutor);
+          Exception commandProcessorResponse = remoteProcessDriverExecutor.run(msg.command);
+          remoteDriver.clientRpc.call(new CommandProcessorResponseMessage(msg
+                  .queryId, commandProcessorResponse));
+        });
       });
     } else {
       remoteDriver.submit(() -> {
-        commands.get(msg.queryId).run();
+        es.submit(() -> {
+          commands.get(msg.queryId).run();
+        });
       });
     }
   }
 
   private void handle(ChannelHandlerContext ctx, CompileCommand msg) {
-    LOG.debug("Received client get results request");
+    LOG.debug("Received client compile command request");
 
    remoteDriver.submit(() -> {
-      RemoteProcessDriverExecutor remoteProcessDriverExecutor = remoteProcessDriverExecutorFactory.createRemoteProcessDriverExecutor(
-              msg.command, msg.hiveConfBytes, msg.queryId);
-      commands.put(msg.queryId, remoteProcessDriverExecutor);
-      Exception commandProcessorResponse = remoteProcessDriverExecutor.compileAndRespond(msg
-              .command);
+     es.submit(() -> {
+       RemoteProcessDriverExecutor remoteProcessDriverExecutor = remoteProcessDriverExecutorFactory.createRemoteProcessDriverExecutor(
+               msg.command, msg.hiveConfBytes, msg.queryId);
+       commands.put(msg.queryId, remoteProcessDriverExecutor);
+       Exception commandProcessorResponse = remoteProcessDriverExecutor.compileAndRespond(msg
+               .command);
+     });
     });
   }
 
@@ -149,14 +158,46 @@ class DriverProtocol extends BaseProtocol {
     LOG.debug("Received client get results request");
 
     remoteDriver.submit(() -> {
-      List res = new ArrayList();
-      try {
-        boolean moreResults = commands.get(msg.queryId).getResults(res);
-        remoteDriver.clientRpc.call(new CommandResults(res, msg.queryId, moreResults));
-      } catch (IOException e) {
-        // TODO how are exceptions handled?
-        throw new RuntimeException(e);
-      }
+      es.submit(() -> {
+        List res = new ArrayList();
+        try {
+          boolean moreResults = commands.get(msg.queryId).getResults(res);
+          remoteDriver.clientRpc.call(new CommandResults(res, msg.queryId, moreResults));
+        } catch (IOException e) {
+          // TODO how are exceptions handled?
+          throw new RuntimeException(e);
+        }
+      });
+    });
+  }
+
+  private void handle(ChannelHandlerContext ctx, HasResultSet msg) {
+    LOG.debug("Received has result set request for query id " + msg.queryId);
+    remoteDriver.submit(() -> {
+      es.submit(() -> {
+        boolean res = commands.get(msg.queryId).hasResultSet();
+        remoteDriver.clientRpc.call(new HasResultSetResponse(msg.queryId, res));
+      });
+    });
+  }
+
+  private void handle(ChannelHandlerContext ctx, GetSchema msg) {
+    LOG.debug("Received has result set request for query id " + msg.queryId);
+    remoteDriver.submit(() -> {
+      es.submit(() -> {
+        byte[] res = commands.get(msg.queryId).getSchema();
+        remoteDriver.clientRpc.call(new GetSchemaResponse(msg.queryId, res));
+      });
+    });
+  }
+
+  private void handle(ChannelHandlerContext ctx, IsFetchingTable msg) {
+    LOG.debug("Received has result set request for query id " + msg.queryId);
+    remoteDriver.submit(() -> {
+      es.submit(() -> {
+        boolean res = commands.get(msg.queryId).isFetchingTable();
+        remoteDriver.clientRpc.call(new IsFetchingTableResponse(msg.queryId, res));
+      });
     });
   }
 

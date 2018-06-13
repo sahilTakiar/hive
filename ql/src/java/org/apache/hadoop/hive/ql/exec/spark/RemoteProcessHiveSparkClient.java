@@ -1,5 +1,6 @@
 package org.apache.hadoop.hive.ql.exec.spark;
 
+import org.apache.hadoop.hive.metastore.api.Schema;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 
 import java.io.IOException;
@@ -15,4 +16,10 @@ public interface RemoteProcessHiveSparkClient extends Serializable {
   CommandProcessorResponse compileAndRespond(String statement, byte[] hiveConfBytes);
 
   CommandProcessorResponse run();
+
+  boolean hasResultSet();
+
+  Schema getSchema();
+
+  boolean isFetchingTable();
 }

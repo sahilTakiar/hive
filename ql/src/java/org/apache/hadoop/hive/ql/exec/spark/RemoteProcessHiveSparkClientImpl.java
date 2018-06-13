@@ -1,5 +1,6 @@
 package org.apache.hadoop.hive.ql.exec.spark;
 
+import org.apache.hadoop.hive.metastore.api.Schema;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hive.spark.client.ClientProtocol;
 import org.slf4j.Logger;
@@ -43,5 +44,20 @@ public class RemoteProcessHiveSparkClientImpl implements RemoteProcessHiveSparkC
   public CommandProcessorResponse run() {
     this.clientProtocol.run(this.queryId);
     return new CommandProcessorResponse(0);
+  }
+
+  @Override
+  public boolean hasResultSet() {
+    return this.clientProtocol.hasResultSet(this.queryId);
+  }
+
+  @Override
+  public Schema getSchema() {
+    return KryoSerializer.deserialize(this.clientProtocol.getSchema(this.queryId), Schema.class);
+  }
+
+  @Override
+  public boolean isFetchingTable() {
+    return this.clientProtocol.isFetchingTable(this.queryId);
   }
 }

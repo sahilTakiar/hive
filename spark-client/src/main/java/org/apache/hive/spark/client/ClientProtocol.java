@@ -27,11 +27,17 @@ public class ClientProtocol extends BaseProtocol {
   private final SparkClient sparkClient;
   private final Map<String, JobHandleImpl<?>> jobs;
   private final Map<String, BlockingQueue<CommandResults>> commandResults;
+  private final Map<String, BlockingQueue<Boolean>> commandHasResultSet;
+  private final Map<String, BlockingQueue<Boolean>> isFetchingTableRes;
+  private final Map<String, BlockingQueue<byte[]>> commandSchema;
 
   public ClientProtocol(SparkClient sparkClient) {
     this.sparkClient = sparkClient;
     this.jobs = Maps.newConcurrentMap();
     this.commandResults = Maps.newConcurrentMap();
+    this.commandHasResultSet = Maps.newConcurrentMap();
+    this.commandSchema = Maps.newConcurrentMap();
+    this.isFetchingTableRes = Maps.newConcurrentMap();
   }
 
   <T extends Serializable> JobHandleImpl<T> submit(Job<T> job, List<JobHandle.Listener<T>> listeners) {
@@ -167,6 +173,50 @@ public class ClientProtocol extends BaseProtocol {
     sparkClient.getDriverRpc().call(new RunCommand(null, null, queryId));
   }
 
+  public boolean hasResultSet(String queryId) {
+    LOG.debug("Sending hasResultSet request for queryId " + queryId);
+    BlockingQueue<Boolean> results = new ArrayBlockingQueue<>(1);
+    commandHasResultSet.put(queryId, results);
+    sparkClient.getDriverRpc().call(new HasResultSet(queryId));
+    boolean response;
+    try {
+      response = results.take();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    commandHasResultSet.remove(queryId);
+    return response;
+  }
+
+  public byte[] getSchema(String queryId) {
+    BlockingQueue<byte[]> results = new ArrayBlockingQueue<>(1);
+    commandSchema.put(queryId, results);
+    sparkClient.getDriverRpc().call(new GetSchema(queryId));
+    byte[] response;
+    try {
+      response = results.take();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    commandSchema.remove(queryId);
+    return response;
+  }
+
+  public boolean isFetchingTable(String queryId) {
+    LOG.debug("Sending isFetchingTable request for queryId " + queryId);
+    BlockingQueue<Boolean> results = new ArrayBlockingQueue<>(1);
+    isFetchingTableRes.put(queryId, results);
+    sparkClient.getDriverRpc().call(new IsFetchingTable(queryId));
+    boolean response;
+    try {
+      response = results.take();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    isFetchingTableRes.remove(queryId);
+    return response;
+  }
+
   private void handle(ChannelHandlerContext ctx, CommandResults msg) {
     LOG.debug("Received command results for query id " + msg.queryId);
     BlockingQueue<CommandResults> queue = commandResults.get(msg.queryId);
@@ -182,11 +232,20 @@ public class ClientProtocol extends BaseProtocol {
 //    queue.add(msg);
   }
 
+  private void handle(ChannelHandlerContext ctx, HasResultSetResponse msg) {
+    commandHasResultSet.get(msg.queryId).add(msg.hasResultSet);
+  }
+
+  private void handle(ChannelHandlerContext ctx, GetSchemaResponse msg) {
+    commandSchema.get(msg.queryId).add(msg.schema);
+  }
+
+  private void handle(ChannelHandlerContext ctx, IsFetchingTableResponse msg) {
+    isFetchingTableRes.get(msg.queryId).add(msg.isFetchingTableResponse);
+  }
+
   @Override
   protected String name() {
     return "HiveServer2 to Remote Spark Driver Connection";
-  }
-
-  public void run() {
   }
 }

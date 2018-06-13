@@ -31,6 +31,11 @@ public class RemoteProcessDriverExecutorFactoryImpl implements RemoteProcessDriv
 
     private HiveConf hiveConf;
     private IDriver driver;
+    private final SessionState ss; // TODO this might be problematic because all these methods
+    // aren't guaranteed to run in the same thread, might need to find a way to ensure that they
+    // are run in the same thread
+    // Need to fix this, otherwise this won't work, SessionState isn't thread-safe, a lot of its
+    // parameters are not volatile so they will get cached
 
     private RemoteProcessDriverExecutorImpl(String command, byte[] hiveConfBytes, String queryId) {
       // TODO fix this - properites should be inherited
@@ -39,13 +44,14 @@ public class RemoteProcessDriverExecutorFactoryImpl implements RemoteProcessDriv
       // issue is that this can't be the same as tmp because the there would be two derby
       // connections which isn't allowed
       System.setProperty("test.tmp.dir",
-              "/Users/stakiar/Documents/idea/apache-hive/itests/qtest-spark/target/tmp2");
+              "/Users/stakiar/Documents/idea/apache-hive/itests/qtest-spark/target/tmp");
       System.setProperty("test.tmp.dir.uri",
-              "file:///Users/stakiar/Documents/idea/apache-hive/itests/qtest-spark/target/tmp2");
+              "file:///Users/stakiar/Documents/idea/apache-hive/itests/qtest-spark/target/tmp");
       this.hiveConf = KryoSerializer.deserializeHiveConf(hiveConfBytes);
       LOG.info("AFTER SERIALIZATION " + hiveConf);
-      SessionState ss = new SessionState(hiveConf);
+      ss = new SessionState(hiveConf);
       SessionState.start(ss);
+      LOG.info("STARTED SESSION STATE " + SessionState.get());
       try {
         FileSystem fs = FileSystem.get(hiveConf);
         fs.listStatus(new Path("/"));
@@ -60,11 +66,13 @@ public class RemoteProcessDriverExecutorFactoryImpl implements RemoteProcessDriv
     @Override
     public Exception run(String command) {
       LOG.info("RUNNING COMMAND " + command);
+      SessionState.setCurrentSessionState(ss);
       return this.driver.run(command);
     }
 
     @Override
     public boolean getResults(List res) throws IOException {
+      SessionState.setCurrentSessionState(ss);
       boolean result = this.driver.getResults(res);
       LOG.info("RETURNING RESULTS " + Arrays.toString(res.toArray()));
       return result;
@@ -72,12 +80,32 @@ public class RemoteProcessDriverExecutorFactoryImpl implements RemoteProcessDriv
 
     @Override
     public Exception run() {
+      SessionState.setCurrentSessionState(ss);
       return this.driver.run();
     }
 
     @Override
     public Exception compileAndRespond(String command) {
+      SessionState.setCurrentSessionState(ss);
       return this.driver.compileAndRespond(command);
+    }
+
+    @Override
+    public boolean hasResultSet() {
+      SessionState.setCurrentSessionState(ss);
+      return this.driver.hasResultSet();
+    }
+
+    @Override
+    public byte[] getSchema() {
+      SessionState.setCurrentSessionState(ss);
+      return KryoSerializer.serialize(this.driver.getSchema());
+    }
+
+    @Override
+    public boolean isFetchingTable() {
+      SessionState.setCurrentSessionState(ss);
+      return this.driver.isFetchingTable();
     }
   }
 }

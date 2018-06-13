@@ -250,10 +250,10 @@ public class SQLOperation extends ExecuteStatementOperation {
   public void runInternal() throws HiveSQLException {
     setState(OperationState.PENDING);
 
-    boolean runAsync = shouldRunAsync();
+    boolean runAsync = shouldRunAsync(); // this is true when coming from JDBC
     final boolean asyncPrepare = runAsync
       && HiveConf.getBoolVar(queryState.getConf(),
-        HiveConf.ConfVars.HIVE_SERVER2_ASYNC_EXEC_ASYNC_COMPILE);
+        HiveConf.ConfVars.HIVE_SERVER2_ASYNC_EXEC_ASYNC_COMPILE); // this is false
     if (!asyncPrepare) {
       prepare(queryState);
     }

@@ -1,5 +1,6 @@
 package org.apache.hadoop.hive.ql;
 
+import org.apache.hadoop.hive.metastore.api.Schema;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 
 import java.io.IOException;
@@ -14,4 +15,10 @@ interface RemoteProcessClient {
   CommandProcessorResponse compileAndRespond(String statement);
 
   CommandProcessorResponse run();
+
+  boolean hasResultSet();
+
+  Schema getSchema();
+
+  boolean isFetchingTable();
 }

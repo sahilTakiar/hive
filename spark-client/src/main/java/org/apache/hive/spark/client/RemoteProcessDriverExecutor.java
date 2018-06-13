@@ -12,4 +12,10 @@ public interface RemoteProcessDriverExecutor {
   Exception run();
 
   Exception compileAndRespond(String command);
+
+  boolean hasResultSet();
+
+  byte[] getSchema();
+
+  boolean isFetchingTable();
 }

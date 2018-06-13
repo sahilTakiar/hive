@@ -1,6 +1,7 @@
 package org.apache.hadoop.hive.ql;
 
 import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.metastore.api.Schema;
 import org.apache.hadoop.hive.ql.exec.spark.KryoSerializer;
 import org.apache.hadoop.hive.ql.exec.spark.RemoteProcessHiveSparkClient;
 import org.apache.hadoop.hive.ql.log.PerfLogger;
@@ -54,5 +55,20 @@ public class SparkRemoteProcessClient implements RemoteProcessClient {
   @Override
   public CommandProcessorResponse run() {
     return this.hiveSparkClient.run();
+  }
+
+  @Override
+  public boolean hasResultSet() {
+    return this.hiveSparkClient.hasResultSet();
+  }
+
+  @Override
+  public Schema getSchema() {
+    return this.hiveSparkClient.getSchema();
+  }
+
+  @Override
+  public boolean isFetchingTable() {
+    return this.hiveSparkClient.isFetchingTable();
   }
 }

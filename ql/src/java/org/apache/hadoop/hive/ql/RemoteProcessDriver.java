@@ -91,12 +91,12 @@ public class RemoteProcessDriver implements IDriver {
 
   @Override
   public Schema getSchema() {
-    return new Schema();
+    return this.remoteProcessClient.getSchema();
   }
 
   @Override
   public boolean isFetchingTable() {
-    return false;
+    return this.remoteProcessClient.isFetchingTable();
   }
 
   @Override
@@ -132,7 +132,7 @@ public class RemoteProcessDriver implements IDriver {
 
   @Override
   public boolean hasResultSet() {
-    return false;
+    return this.remoteProcessClient.hasResultSet();
   }
 
   private RemoteProcessClient createRemoteProcessClient(HiveConf hiveConf,
