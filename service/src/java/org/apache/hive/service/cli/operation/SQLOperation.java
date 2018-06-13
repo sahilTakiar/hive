@@ -471,30 +471,30 @@ public class SQLOperation extends ExecuteStatementOperation {
   @Override
   public String getTaskStatus() throws HiveSQLException {
     if (driver != null) {
-      List<QueryDisplay.TaskDisplay> statuses = driver.getQueryDisplay().getTaskDisplays();
-      if (statuses != null) {
-        ByteArrayOutputStream out = null;
-        try {
-          ObjectMapper mapper = new ObjectMapper();
-          out = new ByteArrayOutputStream();
-          mapper.writeValue(out, statuses);
-          return out.toString("UTF-8");
-        } catch (JsonGenerationException e) {
-          throw new HiveSQLException(e);
-        } catch (JsonMappingException e) {
-          throw new HiveSQLException(e);
-        } catch (IOException e) {
-          throw new HiveSQLException(e);
-        } finally {
-          if (out != null) {
-            try {
-              out.close();
-            } catch (IOException e) {
-              throw new HiveSQLException(e);
-            }
-          }
-        }
-      }
+//      List<QueryDisplay.TaskDisplay> statuses = driver.getQueryDisplay().getTaskDisplays();
+//      if (statuses != null) {
+//        ByteArrayOutputStream out = null;
+//        try {
+//          ObjectMapper mapper = new ObjectMapper();
+//          out = new ByteArrayOutputStream();
+//          mapper.writeValue(out, statuses);
+//          return out.toString("UTF-8");
+//        } catch (JsonGenerationException e) {
+//          throw new HiveSQLException(e);
+//        } catch (JsonMappingException e) {
+//          throw new HiveSQLException(e);
+//        } catch (IOException e) {
+//          throw new HiveSQLException(e);
+//        } finally {
+//          if (out != null) {
+//            try {
+//              out.close();
+//            } catch (IOException e) {
+//              throw new HiveSQLException(e);
+//            }
+//          }
+//        }
+//      }
     }
     // Driver not initialized
     return null;

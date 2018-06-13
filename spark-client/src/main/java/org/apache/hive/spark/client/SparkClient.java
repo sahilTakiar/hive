@@ -120,4 +120,6 @@ public interface SparkClient extends Serializable {
   void cancel(String jobId);
 
   ClientProtocol getClientProtocol();
+
+  Rpc getDriverRpc();
 }

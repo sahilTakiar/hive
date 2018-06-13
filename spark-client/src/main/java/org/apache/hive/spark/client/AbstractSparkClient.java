@@ -87,7 +87,7 @@ abstract class AbstractSparkClient implements SparkClient {
   protected final Map<String, String> conf;
   private final HiveConf hiveConf;
   private final Future<Void> driverFuture;
-  private Rpc driverRpc;
+  private volatile Rpc driverRpc;
   private final ClientProtocol protocol;
   protected volatile boolean isAlive;
 
@@ -98,7 +98,7 @@ abstract class AbstractSparkClient implements SparkClient {
 
     String secret = rpcServer.createSecret();
     this.driverFuture = startDriver(rpcServer, sessionid, secret);
-    this.protocol = new ClientProtocol(this, this.driverRpc);
+    this.protocol = new ClientProtocol(this);
 
     try {
       // The RPC server will take care of timeouts here.
@@ -221,6 +221,11 @@ abstract class AbstractSparkClient implements SparkClient {
   @Override
   public ClientProtocol getClientProtocol() {
     return this.protocol;
+  }
+
+  @Override
+  public Rpc getDriverRpc() {
+    return this.driverRpc;
   }
 
   private Future<Void> startDriver(final RpcServer rpcServer, final String clientId,

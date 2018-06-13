@@ -42,7 +42,7 @@ public class RemoteProcessDriver implements IDriver {
 
   @Override
   public CommandProcessorResponse compileAndRespond(String statement) {
-    return null;
+    return this.remoteProcessClient.compileAndRespond(statement);
   }
 
   @Override
@@ -62,7 +62,7 @@ public class RemoteProcessDriver implements IDriver {
 
   @Override
   public CommandProcessorResponse run() {
-    return null;
+    return this.remoteProcessClient.run();
   }
 
   @Override

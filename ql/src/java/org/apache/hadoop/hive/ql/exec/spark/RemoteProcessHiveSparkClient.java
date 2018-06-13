@@ -11,4 +11,8 @@ public interface RemoteProcessHiveSparkClient extends Serializable {
   CommandProcessorResponse run(String command, byte[] hiveConfBytes);
 
   boolean getResults(List res) throws IOException;
+
+  CommandProcessorResponse compileAndRespond(String statement, byte[] hiveConfBytes);
+
+  CommandProcessorResponse run();
 }

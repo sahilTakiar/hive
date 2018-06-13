@@ -10,4 +10,8 @@ interface RemoteProcessClient {
   CommandProcessorResponse run(String statement) throws Exception;
 
   boolean getResults(List res) throws IOException;
+
+  CommandProcessorResponse compileAndRespond(String statement);
+
+  CommandProcessorResponse run();
 }

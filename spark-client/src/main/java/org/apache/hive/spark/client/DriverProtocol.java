@@ -115,13 +115,33 @@ class DriverProtocol extends BaseProtocol {
   private void handle(ChannelHandlerContext ctx, RunCommand msg) {
     LOG.debug("Received client run command request for query id " + msg.queryId);
 
-    remoteDriver.submit(() -> {
+    // TODO fix this, this is suppose to be run in a threadpool, right now submit is just
+    // directly invoked
+    if (msg.command != null) {
+      remoteDriver.submit(() -> {
+        RemoteProcessDriverExecutor remoteProcessDriverExecutor = remoteProcessDriverExecutorFactory.createRemoteProcessDriverExecutor(
+                msg.command, msg.hiveConfBytes, msg.queryId);
+        commands.put(msg.queryId, remoteProcessDriverExecutor);
+        Exception commandProcessorResponse = remoteProcessDriverExecutor.run(msg.command);
+        remoteDriver.clientRpc.call(new CommandProcessorResponseMessage(msg
+                .queryId, commandProcessorResponse));
+      });
+    } else {
+      remoteDriver.submit(() -> {
+        commands.get(msg.queryId).run();
+      });
+    }
+  }
+
+  private void handle(ChannelHandlerContext ctx, CompileCommand msg) {
+    LOG.debug("Received client get results request");
+
+   remoteDriver.submit(() -> {
       RemoteProcessDriverExecutor remoteProcessDriverExecutor = remoteProcessDriverExecutorFactory.createRemoteProcessDriverExecutor(
               msg.command, msg.hiveConfBytes, msg.queryId);
       commands.put(msg.queryId, remoteProcessDriverExecutor);
-      Exception commandProcessorResponse = remoteProcessDriverExecutor.run(msg.command);
-      remoteDriver.clientRpc.call(new CommandProcessorResponseMessage(msg
-              .queryId, commandProcessorResponse));
+      Exception commandProcessorResponse = remoteProcessDriverExecutor.compileAndRespond(msg
+              .command);
     });
   }
 

@@ -27,11 +27,9 @@ public class ClientProtocol extends BaseProtocol {
   private final SparkClient sparkClient;
   private final Map<String, JobHandleImpl<?>> jobs;
   private final Map<String, BlockingQueue<CommandResults>> commandResults;
-  private final Rpc driverRpc;
 
-  public ClientProtocol(SparkClient sparkClient, Rpc driverRpc) {
+  public ClientProtocol(SparkClient sparkClient) {
     this.sparkClient = sparkClient;
-    this.driverRpc = driverRpc;
     this.jobs = Maps.newConcurrentMap();
     this.commandResults = Maps.newConcurrentMap();
   }
@@ -39,11 +37,11 @@ public class ClientProtocol extends BaseProtocol {
   <T extends Serializable> JobHandleImpl<T> submit(Job<T> job, List<JobHandle.Listener<T>> listeners) {
 
     final String jobId = UUID.randomUUID().toString();
-    final Promise<T> promise = driverRpc.createPromise();
+    final Promise<T> promise = sparkClient.getDriverRpc().createPromise();
     final JobHandleImpl<T> handle = new JobHandleImpl<>(sparkClient, promise, jobId, listeners);
     jobs.put(jobId, handle);
 
-    final io.netty.util.concurrent.Future<Void> rpc = driverRpc.call(new JobRequest<>(jobId, job));
+    final io.netty.util.concurrent.Future<Void> rpc = sparkClient.getDriverRpc().call(new JobRequest<>(jobId, job));
     LOG.debug("Send JobRequest[{}].", jobId);
 
     // Link the RPC and the promise so that events from one are propagated to the other as
@@ -68,16 +66,16 @@ public class ClientProtocol extends BaseProtocol {
 
   <T extends Serializable> java.util.concurrent.Future<T> run(Job<T> job) {
 
-    @SuppressWarnings("unchecked") final Future<T> rpc = (Future<T>) driverRpc.call(new SyncJobRequest(job), Serializable.class);
+    @SuppressWarnings("unchecked") final Future<T> rpc = (Future<T>) sparkClient.getDriverRpc().call(new SyncJobRequest(job), Serializable.class);
     return rpc;
   }
 
   void cancel(String jobId) {
-    driverRpc.call(new CancelJob(jobId));
+    sparkClient.getDriverRpc().call(new CancelJob(jobId));
   }
 
   java.util.concurrent.Future<?> endSession() {
-    return driverRpc.call(new EndSession());
+    return sparkClient.getDriverRpc().call(new EndSession());
   }
 
   private void handle(ChannelHandlerContext ctx, Error msg) {
@@ -134,19 +132,39 @@ public class ClientProtocol extends BaseProtocol {
 
   public void run(String command, byte[] hiveConfBytes, String queryId) {
     LOG.debug("Sending run command request for query id " + queryId);
-    driverRpc.call(new RunCommand(command, hiveConfBytes, queryId));
+    sparkClient.getDriverRpc().call(new RunCommand(command, hiveConfBytes, queryId));
   }
 
   public boolean getResults(String queryId, List res) {
     LOG.debug("Sending get results request for query id " + queryId);
     BlockingQueue<CommandResults> results = new ArrayBlockingQueue<>(1);
     commandResults.put(queryId, results);
-    driverRpc.call(new GetResults(queryId));
-    CommandResults commandResults1 = results.poll();
+    sparkClient.getDriverRpc().call(new GetResults(queryId));
+    CommandResults commandResults1 = null;
+    try {
+      commandResults1 = results.take();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
     res.addAll(commandResults1.res);
     commandResults.remove(queryId);
     return commandResults1.moreResults;
     // TODO model this as a map of Futures - or something similar, maybe need a request id?
+    // could just use a map with key = query id and value = pair(lock, commandresults) - could
+    // use striped instead if there are too many locks
+    // should it be a single hashmap for all objects, or separate maps for each getRequest?
+    // the issue with a single map is that the keys will conflict, which makes the client
+    // non-thread safe
+  }
+
+  public void compileAndRespond(String queryId, String command, byte[] hiveConfBytes) {
+    LOG.debug("Sending run command request for query id " + queryId);
+    sparkClient.getDriverRpc().call(new CompileCommand(command, hiveConfBytes, queryId));
+  }
+
+  public void run(String queryId) {
+    LOG.debug("Sending run command request for query id " + queryId);
+    sparkClient.getDriverRpc().call(new RunCommand(null, null, queryId));
   }
 
   private void handle(ChannelHandlerContext ctx, CommandResults msg) {
@@ -167,5 +185,8 @@ public class ClientProtocol extends BaseProtocol {
   @Override
   protected String name() {
     return "HiveServer2 to Remote Spark Driver Connection";
+  }
+
+  public void run() {
   }
 }

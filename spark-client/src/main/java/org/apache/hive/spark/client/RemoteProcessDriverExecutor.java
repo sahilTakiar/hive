@@ -8,4 +8,8 @@ public interface RemoteProcessDriverExecutor {
   Exception run(String command);
 
   boolean getResults(List res) throws IOException;
+
+  Exception run();
+
+  Exception compileAndRespond(String command);
 }

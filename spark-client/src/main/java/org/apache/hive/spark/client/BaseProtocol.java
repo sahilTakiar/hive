@@ -25,7 +25,7 @@ import org.apache.hive.spark.client.rpc.RpcDispatcher;
 import org.apache.hive.spark.counter.SparkCounters;
 
 
-abstract class BaseProtocol extends RpcDispatcher {
+public abstract class BaseProtocol extends RpcDispatcher {
 
   protected static class CancelJob implements Serializable {
 
@@ -231,6 +231,19 @@ abstract class BaseProtocol extends RpcDispatcher {
     final String queryId;
 
     RunCommand(String command, byte[] hiveConfBytes, String queryId) {
+      this.command = command;
+      this.hiveConfBytes = hiveConfBytes;
+      this.queryId = queryId;
+    }
+  }
+
+  protected static class CompileCommand implements Serializable {
+
+    final String command;
+    final byte[] hiveConfBytes;
+    final String queryId;
+
+    CompileCommand(String command, byte[] hiveConfBytes, String queryId) {
       this.command = command;
       this.hiveConfBytes = hiveConfBytes;
       this.queryId = queryId;

@@ -578,6 +578,8 @@ public final class FileUtils {
    */
   public static boolean mkdir(FileSystem fs, Path f, Configuration conf) throws IOException {
     LOG.info("Creating directory if it doesn't exist: " + f);
+    LOG.info("CONNECTED TO " + fs.getUri());
+    LOG.info("VALUE OF fs.defaultFS " + fs.getConf().get("fs.defaultFS"));
     return fs.mkdirs(f);
   }
 
