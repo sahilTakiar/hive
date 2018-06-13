@@ -49,8 +49,18 @@ public class RemoteProcessDriverExecutorFactoryImpl implements RemoteProcessDriv
               "file:///Users/stakiar/Documents/idea/apache-hive/itests/qtest-spark/target/tmp");
       this.hiveConf = KryoSerializer.deserializeHiveConf(hiveConfBytes);
       LOG.info("AFTER SERIALIZATION " + hiveConf);
-      ss = new SessionState(hiveConf);
-      SessionState.start(ss);
+
+       // TODO find a better way /place to do this, shouldn't be in the
+      // RemoteProcessDriverExecutorImpl
+    // because a new one is created for each Driver, but the SessionState should only be created
+    // once per RemoteDriver - could put it in a static place
+
+      if (SessionState.get() == null) {
+        ss = new SessionState(hiveConf);
+        SessionState.start(ss);
+      } else {
+        ss = SessionState.get();
+      }
       LOG.info("STARTED SESSION STATE " + SessionState.get());
       try {
         FileSystem fs = FileSystem.get(hiveConf);

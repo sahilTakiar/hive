@@ -121,6 +121,7 @@ class DriverProtocol extends BaseProtocol {
     // TODO fix this, this is suppose to be run in a threadpool, right now submit is just
     // directly invoked
     if (msg.command != null) {
+      // TODO the bug is that you create a new SessionState object for each Driver
       remoteDriver.submit(() -> {
         es.submit(() -> {
           RemoteProcessDriverExecutor remoteProcessDriverExecutor = remoteProcessDriverExecutorFactory.createRemoteProcessDriverExecutor(
