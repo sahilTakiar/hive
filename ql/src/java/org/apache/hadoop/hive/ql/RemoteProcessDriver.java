@@ -6,6 +6,8 @@ import org.apache.hadoop.hive.ql.exec.FetchTask;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.session.SessionState;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
@@ -15,6 +17,8 @@ import java.util.List;
  * Runs a {@link IDriver} in a remote process.
  */
 public class RemoteProcessDriver implements IDriver {
+
+  private static final Logger LOG = LoggerFactory.getLogger(RemoteProcessDriver.class);
 
   private final HiveConf hiveConf;
   private final QueryState queryState;
@@ -106,7 +110,7 @@ public class RemoteProcessDriver implements IDriver {
 
   @Override
   public void close() {
-
+    LOG.info("GOT CLOSE CALL!");
   }
 
   @Override

@@ -101,7 +101,7 @@ public class TestMultiSessionsHS2WithLocalClusterSpark {
     dataFilePath = new Path(dataFileDir, "kv1.txt");
     DriverManager.setLoginTimeout(0);
     conf.setBoolVar(ConfVars.HIVE_SUPPORT_CONCURRENCY, false);
-    miniHS2 = new MiniHS2(conf, MiniClusterType.MR);
+    miniHS2 = new MiniHS2.Builder().withRemoteMetastore().withConf(conf).withMiniMR().build();
     Map<String, String> overlayProps = new HashMap<String, String>();
     overlayProps.put(ConfVars.HIVE_SERVER2_SESSION_HOOK.varname,
       LocalClusterSparkSessionHook.class.getName());

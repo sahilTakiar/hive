@@ -1845,7 +1845,9 @@ public class SessionState {
   public void closeSparkSession() {
     if (sparkSession != null) {
       try {
+        getPerfLogger().PerfLogBegin("CLOSEING SPARK SESSION", "close()");
         SparkSessionManagerImpl.getInstance().closeSession(sparkSession);
+        getPerfLogger().PerfLogEnd("CLOSEING SPARK SESSION", "close()");
       } catch (Exception ex) {
         LOG.error("Error closing spark session.", ex);
       } finally {

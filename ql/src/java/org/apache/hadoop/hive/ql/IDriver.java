@@ -29,11 +29,14 @@ import org.apache.hadoop.hive.ql.exec.FetchTask;
 import org.apache.hadoop.hive.ql.processors.CommandProcessor;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 
+import javax.annotation.concurrent.NotThreadSafe;
+
 /**
  * Hive query executer driver
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+@NotThreadSafe
 public interface IDriver extends CommandProcessor {
 
   int compile(String string);
