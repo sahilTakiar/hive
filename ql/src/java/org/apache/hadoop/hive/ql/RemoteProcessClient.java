@@ -21,4 +21,8 @@ interface RemoteProcessClient {
   Schema getSchema();
 
   boolean isFetchingTable();
+
+  void close();
+
+  void destroy();
 }

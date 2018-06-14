@@ -71,4 +71,14 @@ public class SparkRemoteProcessClient implements RemoteProcessClient {
   public boolean isFetchingTable() {
     return this.hiveSparkClient.isFetchingTable();
   }
+
+  @Override
+  public void close() {
+    this.hiveSparkClient.close();
+  }
+
+  @Override
+  public void destroy() {
+    this.hiveSparkClient.destroy();
+  }
 }

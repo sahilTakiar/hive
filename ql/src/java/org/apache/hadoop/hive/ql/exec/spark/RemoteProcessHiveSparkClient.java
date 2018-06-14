@@ -22,4 +22,8 @@ public interface RemoteProcessHiveSparkClient extends Serializable {
   Schema getSchema();
 
   boolean isFetchingTable();
+
+  void close();
+
+  void destroy();
 }

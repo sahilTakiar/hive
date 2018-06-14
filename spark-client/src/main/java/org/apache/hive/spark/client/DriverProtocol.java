@@ -207,6 +207,24 @@ class DriverProtocol extends BaseProtocol {
     });
   }
 
+  private void handle(ChannelHandlerContext ctx, CloseDriverRequest msg) {
+    LOG.debug("Received has close driver request for query id " + msg.queryId);
+    remoteDriver.submit(() -> {
+      es.submit(() -> {
+        commands.get(msg.queryId).close();
+      });
+    });
+  }
+
+  private void handle(ChannelHandlerContext ctx, DestroyDriverRequest msg) {
+    LOG.debug("Received has close driver request for query id " + msg.queryId);
+    remoteDriver.submit(() -> {
+      es.submit(() -> {
+        commands.get(msg.queryId).destroy();
+      });
+    });
+  }
+
   private RemoteProcessDriverExecutorFactory createRemoteProcessDriverExecutorFactory() {
     try {
       return (RemoteProcessDriverExecutorFactory) Class.forName("org.apache.hadoop.hive.ql.exec" +

@@ -57,4 +57,14 @@ public class RemoteProcessHiveSparkClientImpl implements RemoteProcessHiveSparkC
   public boolean isFetchingTable() {
     return this.clientProtocol.isFetchingTable(this.queryId);
   }
+
+  @Override
+  public void close() {
+    this.clientProtocol.closeDriver(this.queryId);
+  }
+
+  @Override
+  public void destroy() {
+    this.clientProtocol.destroyDriver(this.queryId);
+  }
 }

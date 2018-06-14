@@ -111,11 +111,13 @@ public class RemoteProcessDriver implements IDriver {
   @Override
   public void close() {
     LOG.info("GOT CLOSE CALL!");
+    this.remoteProcessClient.close();
   }
 
   @Override
   public void destroy() {
-
+    LOG.info("GOT DESTROY CALL!");
+    this.remoteProcessClient.destroy();
   }
 
   @Override

@@ -18,4 +18,8 @@ public interface RemoteProcessDriverExecutor {
   byte[] getSchema();
 
   boolean isFetchingTable();
+
+  void close();
+
+  void destroy();
 }

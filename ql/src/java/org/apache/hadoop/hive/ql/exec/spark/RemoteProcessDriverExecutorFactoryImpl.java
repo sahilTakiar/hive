@@ -118,5 +118,17 @@ public class RemoteProcessDriverExecutorFactoryImpl implements RemoteProcessDriv
       SessionState.setCurrentSessionState(ss);
       return this.driver.isFetchingTable();
     }
+
+    @Override
+    public void close() {
+      SessionState.setCurrentSessionState(ss);
+      this.driver.close();
+    }
+
+    @Override
+    public void destroy() {
+      SessionState.setCurrentSessionState(ss);
+      this.driver.destroy();
+    }
   }
 }

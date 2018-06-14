@@ -264,6 +264,24 @@ public abstract class BaseProtocol extends RpcDispatcher {
     }
   }
 
+  protected static class CloseDriverRequest implements Serializable {
+
+    final String queryId;
+
+    CloseDriverRequest(String queryId) {
+      this.queryId = queryId;
+    }
+  }
+
+  protected static class DestroyDriverRequest implements Serializable {
+
+    final String queryId;
+
+    DestroyDriverRequest(String queryId) {
+      this.queryId = queryId;
+    }
+  }
+
   protected static class GetSchemaResponse implements Serializable {
 
     final String queryId;

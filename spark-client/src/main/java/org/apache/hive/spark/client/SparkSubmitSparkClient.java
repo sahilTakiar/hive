@@ -191,9 +191,9 @@ class SparkSubmitSparkClient extends AbstractSparkClient {
     final List<String> childErrorLog = Collections.synchronizedList(new ArrayList<String>());
     final LogRedirector.LogSourceCallback callback = () -> isAlive;
 
-    LogRedirector.redirect("spark-submit-stdout-redir",
+    LogRedirector.redirect("spark-submit-stdout-redir-" + threadName,
         new LogRedirector(child.getInputStream(), LOG, callback));
-    LogRedirector.redirect("spark-submit-stderr-redir",
+    LogRedirector.redirect("spark-submit-stderr-redir-" + threadName,
         new LogRedirector(child.getErrorStream(), LOG, childErrorLog, callback));
 
     runnable = () -> {

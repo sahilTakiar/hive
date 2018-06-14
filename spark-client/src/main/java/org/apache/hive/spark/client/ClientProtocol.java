@@ -251,6 +251,14 @@ public class ClientProtocol extends BaseProtocol {
     return response;
   }
 
+  public void closeDriver(String queryId) {
+    sparkClient.getDriverRpc().call(new CloseDriverRequest(queryId));
+  }
+
+  public void destroyDriver(String queryId) {
+    sparkClient.getDriverRpc().call(new DestroyDriverRequest(queryId));
+  }
+
   private void handle(ChannelHandlerContext ctx, CommandResults msg) {
     LOG.debug("Received command results for query id " + msg.queryId);
     BlockingQueue<CommandResults> queue = commandResults.get(msg.queryId);
