@@ -44,9 +44,9 @@ public class RemoteProcessDriverExecutorFactoryImpl implements RemoteProcessDriv
       // issue is that this can't be the same as tmp because the there would be two derby
       // connections which isn't allowed
       System.setProperty("test.tmp.dir",
-              "/Users/stakiar/Documents/idea/apache-hive/itests/qtest-spark/target/tmp");
+              "/Users/stakiar/Documents/idea/apache-hive/itests/hive-unit/target/tmp");
       System.setProperty("test.tmp.dir.uri",
-              "file:///Users/stakiar/Documents/idea/apache-hive/itests/qtest-spark/target/tmp");
+              "file:///Users/stakiar/Documents/idea/apache-hive/itests/hive-unit/target/tmp");
       this.hiveConf = KryoSerializer.deserializeHiveConf(hiveConfBytes);
       LOG.info("AFTER SERIALIZATION " + hiveConf);
 

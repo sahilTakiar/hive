@@ -218,7 +218,7 @@ public class SparkTask extends Task<SparkWork> {
       // TODO add this back in - doesn't make sense to do this with a remote process driver so
       // need to factor this out
 //      if (sparkSession != null && sparkSessionManager != null) {
-//        rc = close(rc);
+        rc = close(rc);
 //        try {
 //          sparkSessionManager.returnSession(sparkSession);
 //        } catch (HiveException ex) {

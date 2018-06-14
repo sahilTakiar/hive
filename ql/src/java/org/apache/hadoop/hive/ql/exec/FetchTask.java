@@ -131,6 +131,7 @@ public class FetchTask extends Task<FetchWork> implements Serializable {
   }
 
   public boolean fetch(List res) throws IOException {
+    LOG.info("FETCHING FROM FILE " + fetch.currPath);
     sink.reset(res);
     int rowsRet = work.getLeastNumRows();
     if (rowsRet <= 0) {

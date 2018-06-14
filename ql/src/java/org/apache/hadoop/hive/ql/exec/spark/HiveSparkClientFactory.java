@@ -68,7 +68,7 @@ public class HiveSparkClientFactory {
     // Submit spark job through local spark context while spark master is local mode, otherwise submit
     // spark job through remote spark context.
     String master = sparkConf.get("spark.master");
-    if (master.equals("local") || master.startsWith("local[")) {
+    if (master.equals("local")) { //|| master.startsWith("local[")) {
       // With local spark context, all user sessions share the same spark context.
       return LocalHiveSparkClient.getInstance(generateSparkConf(sparkConf), hiveconf);
     } else {

@@ -135,7 +135,9 @@ class DriverProtocol extends BaseProtocol {
     } else {
       remoteDriver.submit(() -> {
         es.submit(() -> {
-          commands.get(msg.queryId).run();
+          Exception res = commands.get(msg.queryId).run();
+          remoteDriver.clientRpc.call(new CommandProcessorResponseMessage(msg
+                  .queryId, res));
         });
       });
     }
@@ -151,6 +153,8 @@ class DriverProtocol extends BaseProtocol {
        commands.put(msg.queryId, remoteProcessDriverExecutor);
        Exception commandProcessorResponse = remoteProcessDriverExecutor.compileAndRespond(msg
                .command);
+       remoteDriver.clientRpc.call(new CommandProcessorResponseMessage(msg
+                  .queryId, commandProcessorResponse));
      });
     });
   }

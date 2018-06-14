@@ -112,7 +112,7 @@ public class FetchOperator implements Serializable {
   private transient Iterator<PartitionDesc> iterPartDesc;
   private transient Iterator<FetchInputFormatSplit> iterSplits = Collections.emptyIterator();
 
-  private transient Path currPath;
+  public transient Path currPath;
   private transient PartitionDesc currDesc;
   private transient Deserializer currSerDe;
   private transient Converter ObjectConverter;

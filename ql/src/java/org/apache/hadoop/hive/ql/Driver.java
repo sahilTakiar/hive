@@ -2699,6 +2699,7 @@ public class Driver implements IDriver {
       if (fetchTask.getWork().isUsingThriftJDBCBinarySerDe()) {
         maxRows = 1;
       }
+      LOG.info("FETCH READING READING FROM DIR " + fetchTask.getWork().getTblDir());
       fetchTask.setMaxRows(maxRows);
       return fetchTask.fetch(res);
     }

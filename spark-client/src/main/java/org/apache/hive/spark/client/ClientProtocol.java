@@ -30,6 +30,7 @@ public class ClientProtocol extends BaseProtocol {
   private final Map<String, BlockingQueue<Boolean>> commandHasResultSet;
   private final Map<String, BlockingQueue<Boolean>> isFetchingTableRes;
   private final Map<String, BlockingQueue<byte[]>> commandSchema;
+  private final Map<String, BlockingQueue<Exception>> commandProcessResponses;
 
   public ClientProtocol(SparkClient sparkClient) {
     this.sparkClient = sparkClient;
@@ -38,6 +39,7 @@ public class ClientProtocol extends BaseProtocol {
     this.commandHasResultSet = Maps.newConcurrentMap();
     this.commandSchema = Maps.newConcurrentMap();
     this.isFetchingTableRes = Maps.newConcurrentMap();
+    this.commandProcessResponses = Maps.newConcurrentMap();
   }
 
   <T extends Serializable> JobHandleImpl<T> submit(Job<T> job, List<JobHandle.Listener<T>> listeners) {
@@ -136,9 +138,19 @@ public class ClientProtocol extends BaseProtocol {
   // RPC implementation only supports specifying a single RpcDispatcher and it doesn't support
   // polymorphism
 
-  public void run(String command, byte[] hiveConfBytes, String queryId) {
+  public Exception run(String command, byte[] hiveConfBytes, String queryId) {
     LOG.debug("Sending run command request for query id " + queryId);
+    BlockingQueue<Exception> results = new ArrayBlockingQueue<>(1);
+    commandProcessResponses.put(queryId, results);
     sparkClient.getDriverRpc().call(new RunCommand(command, hiveConfBytes, queryId));
+    Exception response;
+    try {
+      response = results.take();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    commandHasResultSet.remove(queryId);
+    return response;
   }
 
   public boolean getResults(String queryId, List res) {
@@ -163,14 +175,34 @@ public class ClientProtocol extends BaseProtocol {
     // non-thread safe
   }
 
-  public void compileAndRespond(String queryId, String command, byte[] hiveConfBytes) {
+  public Exception compileAndRespond(String queryId, String command, byte[] hiveConfBytes) {
     LOG.debug("Sending run command request for query id " + queryId);
+    BlockingQueue<Exception> results = new ArrayBlockingQueue<>(1);
+    commandProcessResponses.put(queryId, results);
     sparkClient.getDriverRpc().call(new CompileCommand(command, hiveConfBytes, queryId));
+    Exception response;
+    try {
+      response = results.take();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    commandHasResultSet.remove(queryId);
+    return response;
   }
 
-  public void run(String queryId) {
+  public Exception run(String queryId) {
     LOG.debug("Sending run command request for query id " + queryId);
+    BlockingQueue<Exception> results = new ArrayBlockingQueue<>(1);
+    commandProcessResponses.put(queryId, results);
     sparkClient.getDriverRpc().call(new RunCommand(null, null, queryId));
+    Exception response;
+    try {
+      response = results.take();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    commandHasResultSet.remove(queryId);
+    return response;
   }
 
   public boolean hasResultSet(String queryId) {
@@ -227,6 +259,7 @@ public class ClientProtocol extends BaseProtocol {
   private void handle(ChannelHandlerContext ctx, CommandProcessorResponseMessage msg) {
     LOG.debug("Received command results for query id " + msg.queryId);
     LOG.debug("Received CommandProcessorResponse " + msg.commandProcessorResponse);
+    commandProcessResponses.get(msg.queryId).add(msg.commandProcessorResponse);
 //    BlockingQueue<CommandResults> queue = commandResults.get(msg.queryId);
 //    Preconditions.checkState(commandResults.get(msg.queryId).remainingCapacity() == 1);
 //    queue.add(msg);

@@ -23,8 +23,7 @@ public class RemoteProcessHiveSparkClientImpl implements RemoteProcessHiveSparkC
 
   @Override
   public CommandProcessorResponse run(String command, byte[] hiveConfBytes) {
-    this.clientProtocol.run(command, hiveConfBytes, this.queryId);
-    return new CommandProcessorResponse(0);
+    return (CommandProcessorResponse) this.clientProtocol.run(command, hiveConfBytes, this.queryId);
   }
 
   @Override
@@ -36,14 +35,12 @@ public class RemoteProcessHiveSparkClientImpl implements RemoteProcessHiveSparkC
 
   @Override
   public CommandProcessorResponse compileAndRespond(String statement, byte[] hiveConfBytes) {
-    this.clientProtocol.compileAndRespond(this.queryId, statement, hiveConfBytes);
-    return new CommandProcessorResponse(0);
+    return (CommandProcessorResponse) this.clientProtocol.compileAndRespond(this.queryId, statement, hiveConfBytes);
   }
 
   @Override
   public CommandProcessorResponse run() {
-    this.clientProtocol.run(this.queryId);
-    return new CommandProcessorResponse(0);
+    return (CommandProcessorResponse) this.clientProtocol.run(this.queryId);
   }
 
   @Override
