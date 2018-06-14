@@ -55,7 +55,7 @@ import static org.junit.Assert.assertTrue;
 public class TestMultiSessionsHS2WithLocalClusterSpark {
   public static final String TEST_TAG = "miniHS2.localClusterSpark.tag";
   public static final String TEST_TAG_VALUE = "miniHS2.localClusterSpark.value";
-  private static final int PARALLEL_NUMBER = 3;
+  private static final int PARALLEL_NUMBER = 1;
 
   public static class LocalClusterSparkSessionHook implements HiveSessionHook {
     @Override

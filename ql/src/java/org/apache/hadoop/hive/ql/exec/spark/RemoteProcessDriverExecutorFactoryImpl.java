@@ -58,10 +58,11 @@ public class RemoteProcessDriverExecutorFactoryImpl implements RemoteProcessDriv
       if (SessionState.get() == null) {
         ss = new SessionState(hiveConf);
         SessionState.start(ss);
+        LOG.info("STARTED NEW SESSION STATE " + SessionState.get());
       } else {
         ss = SessionState.get();
+        LOG.info("USING EXISTING SESSION STATE " + SessionState.get());
       }
-      LOG.info("STARTED SESSION STATE " + SessionState.get());
       try {
         FileSystem fs = FileSystem.get(hiveConf);
         fs.listStatus(new Path("/"));

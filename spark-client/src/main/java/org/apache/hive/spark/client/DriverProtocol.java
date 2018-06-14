@@ -73,6 +73,7 @@ class DriverProtocol extends BaseProtocol {
   private void handle(ChannelHandlerContext ctx, EndSession msg) {
     LOG.debug("Shutting down due to EndSession request.");
     remoteDriver.shutdown(null);
+    es.shutdownNow();
   }
 
   private void handle(ChannelHandlerContext ctx, JobRequest msg) {
