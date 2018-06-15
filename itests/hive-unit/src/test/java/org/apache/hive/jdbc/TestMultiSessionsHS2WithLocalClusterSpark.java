@@ -38,6 +38,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
+import org.apache.hadoop.hive.metastore.ObjectStore;
 import org.apache.hive.jdbc.miniHS2.MiniHS2;
 import org.apache.hive.jdbc.miniHS2.MiniHS2.MiniClusterType;
 import org.apache.hive.service.cli.HiveSQLException;
@@ -106,6 +107,7 @@ public class TestMultiSessionsHS2WithLocalClusterSpark {
     overlayProps.put(ConfVars.HIVE_SERVER2_SESSION_HOOK.varname,
       LocalClusterSparkSessionHook.class.getName());
     miniHS2.start(overlayProps);
+    ObjectStore.setTwoMetastoreTesting(true);
     createDb();
   }
 
