@@ -35,8 +35,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
+import org.apache.hadoop.hive.metastore.ObjectStore;
 import org.apache.hive.jdbc.miniHS2.MiniHS2;
-import org.apache.hive.jdbc.miniHS2.MiniHS2.MiniClusterType;
 import org.apache.hive.service.cli.HiveSQLException;
 import org.apache.hive.service.cli.session.HiveSessionHook;
 import org.apache.hive.service.cli.session.HiveSessionHookContext;
@@ -48,8 +48,15 @@ import org.junit.Test;
 
 /**
  * This class is cloned from TestJdbcWithMiniMR, except use Spark as the execution engine.
+ *
+ * This is copied from TestJdbcWithLocalClusterSpark with the following modifications:
+ *  * Uses a remote metastore
+ *  * Sets ObjectStore.setTwoMetastoreTesting(boolean) to true to prevent some "Persistence
+ *  Manager has been closed" errors
+ *  * Sets hive.security.authorization.manager back to its default value to avoid having to add a
+ *  dependency on the itests jars
  */
-public class TestJdbcWithLocalClusterSpark {
+public class TestJdbcWithLocalClusterSparkAndRemoteProcessDriver {
   public static final String TEST_TAG = "miniHS2.localClusterSpark.tag";
   public static final String TEST_TAG_VALUE = "miniHS2.localClusterSpark.value";
   public static class LocalClusterSparkSessionHook implements HiveSessionHook {
@@ -79,6 +86,7 @@ public class TestJdbcWithLocalClusterSpark {
     conf.set("dfs.client.datanode-restart.timeout", "30");
     conf.set("spark.local.dir", Paths.get(System.getProperty("test.tmp.dir"),
             "TestJdbcWithLocalClusterSpark-local-dir").toString());
+    conf.set("hive.security.authorization.manager", "org.apache.hadoop.hive.ql.security.authorization.plugin.sqlstd.SQLStdHiveAuthorizerFactory");
     return conf;
   }
 
@@ -92,11 +100,12 @@ public class TestJdbcWithLocalClusterSpark {
     dataFilePath = new Path(dataFileDir, "kv1.txt");
     DriverManager.setLoginTimeout(0);
     conf.setBoolVar(ConfVars.HIVE_SUPPORT_CONCURRENCY, false);
-    miniHS2 = new MiniHS2(conf, MiniClusterType.MR);
+    miniHS2 = new MiniHS2.Builder().withRemoteMetastore().withConf(conf).withMiniMR().build();
     Map<String, String> overlayProps = new HashMap<String, String>();
     overlayProps.put(ConfVars.HIVE_SERVER2_SESSION_HOOK.varname,
         LocalClusterSparkSessionHook.class.getName());
     miniHS2.start(overlayProps);
+    ObjectStore.setTwoMetastoreTesting(true);
     createDb();
   }
 

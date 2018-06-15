@@ -268,11 +268,11 @@ public class SetSparkReducerParallelism implements NodeProcessor {
     // hacked together
 
     if (context.getConf().getBoolVar(HiveConf.ConfVars.HIVE_SERVER2_ENABLE_CONTAINER_SERVICE)) {
-      int numExecutors = RemoteDriver.getInstance().jc.sc().sc().getExecutorMemoryStatus().size() - 1;
+      int numExecutors = RemoteDriver.getInstance().sc().sc().getExecutorMemoryStatus().size() - 1;
       SparkConf sparkConf = HiveSparkClientFactory.generateSparkConf(HiveSparkClientFactory
               .initiateSparkConf(context.getConf(), null));
 
-      int defaultParallelism = RemoteDriver.getInstance().jc.sc().sc().defaultParallelism();
+      int defaultParallelism = RemoteDriver.getInstance().sc().sc().defaultParallelism();
 
       if (numExecutors <= 0) {
         sparkMemoryAndCores = new ObjectPair<Long, Integer>(-1L, -1);
