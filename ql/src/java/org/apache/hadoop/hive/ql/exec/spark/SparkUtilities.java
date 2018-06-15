@@ -34,6 +34,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hive.common.ObjectPair;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.exec.GroupByOperator;
 import org.apache.hadoop.hive.ql.exec.Operator;
@@ -55,6 +56,8 @@ import org.apache.hadoop.hive.ql.session.SessionState;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hive.spark.client.SparkClientUtilities;
 import org.apache.spark.SparkConf;
+import org.apache.spark.util.Utils;
+import org.slf4j.Logger;
 
 
 /**
@@ -338,5 +341,36 @@ public class SparkUtilities {
     URI uri = URI.create(url);
     InetAddress address = InetAddress.getByName(uri.getHost());
     return uri.getScheme() + "://" + address.getCanonicalHostName() + ":" + uri.getPort();
+  }
+
+  public static ObjectPair<Long, Integer> getMemoryAndCores(Logger log, SparkConf sparkConf, int
+          numExecutors, int defaultParallelism) {
+    // at start-up, we may be unable to get number of executors
+    if (numExecutors <= 0) {
+      return new ObjectPair<Long, Integer>(-1L, -1);
+    }
+    int executorMemoryInMB = Utils.memoryStringToMb(
+        sparkConf.get("spark.executor.memory", "512m"));
+    double memoryFraction = 1.0 - sparkConf.getDouble("spark.storage.memoryFraction", 0.6);
+    long totalMemory = (long) (numExecutors * executorMemoryInMB * memoryFraction * 1024 * 1024);
+    int totalCores;
+    String masterURL = sparkConf.get("spark.master");
+    if (masterURL.startsWith("spark") || masterURL.startsWith("local")) {
+      totalCores = sparkConf.contains("spark.default.parallelism") ?
+          sparkConf.getInt("spark.default.parallelism", 1) :
+          defaultParallelism;
+      totalCores = Math.max(totalCores, numExecutors);
+    } else {
+      int coresPerExecutor = sparkConf.getInt("spark.executor.cores", 1);
+      totalCores = numExecutors * coresPerExecutor;
+    }
+    totalCores = totalCores / sparkConf.getInt("spark.task.cpus", 1);
+
+    long memoryPerTaskInBytes = totalMemory / totalCores;
+    log.info("Hive on Spark application currently has number of executors: " + numExecutors
+        + ", total cores: " + totalCores + ", memory per executor: "
+        + executorMemoryInMB + " mb, memoryFraction: " + memoryFraction);
+    return new ObjectPair<Long, Integer>(Long.valueOf(memoryPerTaskInBytes),
+        Integer.valueOf(totalCores));
   }
 }
