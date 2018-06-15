@@ -237,6 +237,15 @@ public abstract class BaseProtocol extends RpcDispatcher {
     }
   }
 
+  protected static class StartSession implements Serializable {
+
+    final byte[] hiveConfBytes;
+
+    StartSession(byte[] hiveConfBytes) {
+      this.hiveConfBytes = hiveConfBytes;
+    }
+  }
+
   protected static class HasResultSet implements Serializable {
 
     final String queryId;

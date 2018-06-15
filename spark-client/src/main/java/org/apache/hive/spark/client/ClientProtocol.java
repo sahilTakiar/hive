@@ -8,7 +8,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 
-import org.apache.hive.spark.client.rpc.Rpc;
+import org.apache.hadoop.hive.conf.HiveConf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,22 +26,12 @@ public class ClientProtocol extends BaseProtocol {
 
   private final SparkClient sparkClient;
   private final Map<String, JobHandleImpl<?>> jobs;
-  private final Map<String, BlockingQueue<CommandResults>> commandResults;
-  private final Map<String, BlockingQueue<Boolean>> commandHasResultSet;
-  private final Map<String, BlockingQueue<Boolean>> isFetchingTableRes;
-  private final Map<String, BlockingQueue<byte[]>> commandSchema;
-  private final Map<String, BlockingQueue<Exception>> commandProcessResponses;
-  private final Map<String, BlockingQueue> oneMapToRuleThemAll;
+  private final Map<String, BlockingQueue> msgResponses;
 
   public ClientProtocol(SparkClient sparkClient) {
     this.sparkClient = sparkClient;
     this.jobs = Maps.newConcurrentMap();
-    this.commandResults = Maps.newConcurrentMap();
-    this.commandHasResultSet = Maps.newConcurrentMap();
-    this.commandSchema = Maps.newConcurrentMap();
-    this.isFetchingTableRes = Maps.newConcurrentMap();
-    this.commandProcessResponses = Maps.newConcurrentMap();
-    this.oneMapToRuleThemAll = Maps.newConcurrentMap();
+    this.msgResponses = Maps.newConcurrentMap();
   }
 
   <T extends Serializable> JobHandleImpl<T> submit(Job<T> job, List<JobHandle.Listener<T>> listeners) {
@@ -140,152 +130,105 @@ public class ClientProtocol extends BaseProtocol {
   // RPC implementation only supports specifying a single RpcDispatcher and it doesn't support
   // polymorphism
 
+  public void startSession(byte[] hiveConfBytes) {
+    LOG.debug("Sending startSession request");
+    sparkClient.getDriverRpc().call(new StartSession(hiveConfBytes));
+  }
+
   public Exception run(String command, byte[] hiveConfBytes, String queryId) {
     LOG.debug("Sending run command request for query id " + queryId);
-    BlockingQueue<Exception> results = new ArrayBlockingQueue<>(1);
-    Preconditions.checkState(oneMapToRuleThemAll.putIfAbsent(queryId, results) == null);
-    sparkClient.getDriverRpc().call(new RunCommand(command, hiveConfBytes, queryId));
-    Exception response;
-    try {
-      response = results.take();
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-    oneMapToRuleThemAll.remove(queryId);
-    return response;
+    return sendMessage(queryId, new RunCommand(command, hiveConfBytes, queryId));
   }
 
   public boolean getResults(String queryId, List res) {
     LOG.debug("Sending get results request for query id " + queryId);
-    BlockingQueue<CommandResults> results = new ArrayBlockingQueue<>(1);
-    commandResults.put(queryId, results);
-    sparkClient.getDriverRpc().call(new GetResults(queryId));
-    CommandResults commandResults1 = null;
-    try {
-      commandResults1 = results.take();
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-    res.addAll(commandResults1.res);
-    commandResults.remove(queryId);
-    return commandResults1.moreResults;
-    // TODO model this as a map of Futures - or something similar, maybe need a request id?
-    // could just use a map with key = query id and value = pair(lock, commandresults) - could
-    // use striped instead if there are too many locks
-    // should it be a single hashmap for all objects, or separate maps for each getRequest?
-    // the issue with a single map is that the keys will conflict, which makes the client
-    // non-thread safe
+    CommandResults commandResults = sendMessage(queryId, new GetResults(queryId));
+    res.addAll(commandResults.res);
+    return commandResults.moreResults;
   }
 
   public Exception compileAndRespond(String queryId, String command, byte[] hiveConfBytes) {
     LOG.debug("Sending run command request for query id " + queryId);
-    BlockingQueue<Exception> results = new ArrayBlockingQueue<>(1);
-    oneMapToRuleThemAll.put(queryId, results);
-    sparkClient.getDriverRpc().call(new CompileCommand(command, hiveConfBytes, queryId));
-    Exception response;
-    try {
-      response = results.take();
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-    oneMapToRuleThemAll.remove(queryId);
-    return response;
+    return sendMessage(queryId, new CompileCommand(command, hiveConfBytes, queryId));
   }
 
   public Exception run(String queryId) {
     LOG.debug("Sending run command request for query id " + queryId);
-    BlockingQueue<Exception> results = new ArrayBlockingQueue<>(1);
-    oneMapToRuleThemAll.put(queryId, results);
-    sparkClient.getDriverRpc().call(new RunCommand(null, null, queryId));
-    Exception response;
-    try {
-      response = results.take();
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-    oneMapToRuleThemAll.remove(queryId);
-    return response;
+    return sendMessage(queryId, new RunCommand(null, null, queryId));
   }
 
   public boolean hasResultSet(String queryId) {
     LOG.debug("Sending hasResultSet request for queryId " + queryId);
-    BlockingQueue<Boolean> results = new ArrayBlockingQueue<>(1);
-    commandHasResultSet.put(queryId, results);
-    sparkClient.getDriverRpc().call(new HasResultSet(queryId));
-    boolean response;
-    try {
-      response = results.take();
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-    commandHasResultSet.remove(queryId);
-    return response;
+    return sendMessage(queryId, new HasResultSet(queryId));
   }
 
   public byte[] getSchema(String queryId) {
-    BlockingQueue<byte[]> results = new ArrayBlockingQueue<>(1);
-    commandSchema.put(queryId, results);
-    sparkClient.getDriverRpc().call(new GetSchema(queryId));
-    byte[] response;
-    try {
-      response = results.take();
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-    commandSchema.remove(queryId);
-    return response;
+    LOG.debug("Sending getSchema request for queryId " + queryId);
+    return sendMessage(queryId, new GetSchema(queryId));
   }
 
   public boolean isFetchingTable(String queryId) {
     LOG.debug("Sending isFetchingTable request for queryId " + queryId);
-    BlockingQueue<Boolean> results = new ArrayBlockingQueue<>(1);
-    isFetchingTableRes.put(queryId, results);
-    sparkClient.getDriverRpc().call(new IsFetchingTable(queryId));
-    boolean response;
-    try {
-      response = results.take();
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-    isFetchingTableRes.remove(queryId);
-    return response;
+    return sendMessage(queryId, new IsFetchingTable(queryId));
   }
 
   public void closeDriver(String queryId) {
+    LOG.debug("Sending closeDriver request for queryId " + queryId);
     sparkClient.getDriverRpc().call(new CloseDriverRequest(queryId));
   }
 
   public void destroyDriver(String queryId) {
+    LOG.debug("Sending destroyDriver request for queryId " + queryId);
     sparkClient.getDriverRpc().call(new DestroyDriverRequest(queryId));
   }
 
+   /**
+   * Sends a message to the {@link RemoteDriver} via the Driver
+   * {@link org.apache.hive.spark.client.rpc.Rpc} and blocks until the results are received by
+   * the corresponding "handle" method.
+   */
+  private <T> T sendMessage(String queryId, Object msg) {
+    BlockingQueue<T> msgResponse = new ArrayBlockingQueue<>(1);
+    Preconditions.checkState(msgResponses.putIfAbsent(queryId, msgResponse) == null);
+    sparkClient.getDriverRpc().call(msg);
+    T response;
+    try {
+      response = msgResponse.take();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    msgResponses.remove(queryId);
+    return response;
+  }
+
   private void handle(ChannelHandlerContext ctx, CommandResults msg) {
-    LOG.debug("Received command results for query id " + msg.queryId);
-    BlockingQueue<CommandResults> queue = commandResults.get(msg.queryId);
-    Preconditions.checkState(commandResults.get(msg.queryId).remainingCapacity() == 1);
-    queue.add(msg);
+    LOG.debug("Received command results response for query id " + msg.queryId);
+    handleMessageResponse(msg.queryId, msg);
   }
 
   private void handle(ChannelHandlerContext ctx, CommandProcessorResponseMessage msg) {
-    LOG.debug("Received command results for query id " + msg.queryId);
-    LOG.debug("Received CommandProcessorResponse " + msg.commandProcessorResponse);
-    oneMapToRuleThemAll.get(msg.queryId).add(msg.commandProcessorResponse);
-    //commandProcessResponses.get(msg.queryId).add(msg.commandProcessorResponse);
-//    BlockingQueue<CommandResults> queue = commandResults.get(msg.queryId);
-//    Preconditions.checkState(commandResults.get(msg.queryId).remainingCapacity() == 1);
-//    queue.add(msg);
+    LOG.debug("Received command processor response for query id " + msg.queryId);
+    handleMessageResponse(msg.queryId, msg.commandProcessorResponse);
   }
 
   private void handle(ChannelHandlerContext ctx, HasResultSetResponse msg) {
-    commandHasResultSet.get(msg.queryId).add(msg.hasResultSet);
+    LOG.debug("Received has result set response for query id " + msg.queryId);
+    handleMessageResponse(msg.queryId, msg.hasResultSet);
   }
 
   private void handle(ChannelHandlerContext ctx, GetSchemaResponse msg) {
-    commandSchema.get(msg.queryId).add(msg.schema);
+    LOG.debug("Received has getSchema response for query id " + msg.queryId);
+    handleMessageResponse(msg.queryId, msg.schema);
   }
 
   private void handle(ChannelHandlerContext ctx, IsFetchingTableResponse msg) {
-    isFetchingTableRes.get(msg.queryId).add(msg.isFetchingTableResponse);
+    LOG.debug("Received has isFetchingTable response for query id " + msg.queryId);
+    handleMessageResponse(msg.queryId, msg.isFetchingTableResponse);
+  }
+
+  private void handleMessageResponse(String queryId, Object response) {
+    Preconditions.checkState(msgResponses.get(queryId).remainingCapacity() == 1);
+    msgResponses.get(queryId).add(response);
   }
 
   @Override

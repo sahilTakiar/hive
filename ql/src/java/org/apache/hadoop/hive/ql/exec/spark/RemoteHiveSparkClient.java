@@ -201,25 +201,6 @@ public class RemoteHiveSparkClient implements HiveSparkClient {
     }
   }
 
-//  @Override
-//  public CommandProcessorResponse run(final String statement) {
-//    LOG.info("REMOTEHIVESPARKCLIENT SUBMITTING " + statement);
-//    byte[] hiveConfBytes = KryoSerializer.serializeHiveConf(hiveConf);
-//    return this.remoteDriverSparkClient.run(statement, hiveConfBytes);
-    //sparkClient.submit(new DriverJob(hiveConfBytes, statement));
-//    sparkClient.submit(new Job<Serializable>() {
-//      @Override
-//      public Serializable call(JobContext jc) throws Exception {
-//        return new RemoteStatementExecutor(hiveConf, jc, statement).run();
-//      }
-//    });
-//  }
-
-//  @Override
-//  public boolean getResults(List res) throws IOException {
-//    return this.remoteDriverSparkClient.getResults(res);
-//  }
-
   private SparkJobRef submit(final DriverContext driverContext, final SparkWork sparkWork) throws Exception {
     final Context ctx = driverContext.getCtx();
     final HiveConf hiveConf = (HiveConf) ctx.getConf();

@@ -308,6 +308,16 @@ abstract class AbstractSparkClient implements SparkClient {
       }
     }
 
+    String testTmpDir = System.getProperty("test.tmp.dir");
+    if (testTmpDir != null) {
+      addDriverSystemProperty("test.tmp.dir", testTmpDir);
+    }
+
+    String testTmpDirUri = System.getProperty("test.tmp.dir.uri");
+    if (testTmpDirUri != null) {
+      addDriverSystemProperty("test.tmp.dir.uri", testTmpDirUri);
+    }
+
     Writer writer = new OutputStreamWriter(new FileOutputStream(properties), Charsets.UTF_8);
     try {
       allProps.store(writer, "Spark Context configuration");
@@ -429,6 +439,8 @@ abstract class AbstractSparkClient implements SparkClient {
   protected abstract void addExecutorMemory(String executorMemory);
 
   protected abstract void addExecutorCores(String executorCores);
+
+  protected abstract void addDriverSystemProperty(String key, String value);
 
   private static class AddJarJob implements Job<Serializable> {
     private static final long serialVersionUID = 1L;

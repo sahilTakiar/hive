@@ -155,6 +155,12 @@ class SparkSubmitSparkClient extends AbstractSparkClient {
     argv.add(executorCores);
   }
 
+  @Override
+  protected void addDriverSystemProperty(String key, String value) {
+    argv.add("--driver-java-options");
+    argv.add("\"-D" + key + "=" + value + "\"");
+  }
+
   private String getSparkJobCredentialProviderPassword() {
     if (conf.containsKey("spark.yarn.appMasterEnv.HADOOP_CREDSTORE_PASSWORD")) {
       return conf.get("spark.yarn.appMasterEnv.HADOOP_CREDSTORE_PASSWORD");

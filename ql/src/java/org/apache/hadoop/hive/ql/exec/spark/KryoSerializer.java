@@ -65,10 +65,10 @@ public class KryoSerializer {
     return result;
   }
 
-  public static byte[] serializeHiveConf(HiveConf jobConf) {
+  public static byte[] serializeHiveConf(HiveConf hiveConf) {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     try {
-      jobConf.write(new DataOutputStream(out));
+      hiveConf.write(new DataOutputStream(out));
     } catch (IOException e) {
       LOG.error("Error serializing job configuration: " + e, e);
       return null;

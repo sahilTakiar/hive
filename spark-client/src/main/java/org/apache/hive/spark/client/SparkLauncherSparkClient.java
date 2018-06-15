@@ -177,6 +177,11 @@ public class SparkLauncherSparkClient extends AbstractSparkClient {
     getSparkLauncher().addSparkArg("--executor-cores", executorCores);
   }
 
+  @Override
+  protected void addDriverSystemProperty(String key, String value) {
+    // TODO
+  }
+
   private AbstractLauncher<InProcessLauncher> getSparkLauncher() {
     if (this.sparkLauncher == null) {
       this.sparkLauncher = new InProcessLauncher();

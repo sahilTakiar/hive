@@ -3,6 +3,7 @@ package org.apache.hive.spark.client;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hive.spark.client.metrics.Metrics;
 import org.apache.hive.spark.counter.SparkCounters;
 import org.apache.spark.api.java.JavaFutureAction;
@@ -11,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -24,13 +26,12 @@ class DriverProtocol extends BaseProtocol {
   private static final Logger LOG = LoggerFactory.getLogger(DriverProtocol.class);
 
   private final RemoteDriver remoteDriver;
-  private final RemoteProcessDriverExecutorFactory remoteProcessDriverExecutorFactory;
+  private RemoteProcessDriverExecutorFactory remoteProcessDriverExecutorFactory;
   private final Map<String, RemoteProcessDriverExecutor> commands = Maps.newConcurrentMap();
   private final ExecutorService es = Executors.newSingleThreadExecutor();
 
   DriverProtocol(RemoteDriver remoteDriver) {
     this.remoteDriver = remoteDriver;
-    this.remoteProcessDriverExecutorFactory = createRemoteProcessDriverExecutorFactory();
   }
 
   Future<Void> sendError(Throwable error) {
@@ -119,14 +120,10 @@ class DriverProtocol extends BaseProtocol {
   private void handle(ChannelHandlerContext ctx, RunCommand msg) {
     LOG.debug("Received client run command request for query id " + msg.queryId);
 
-    // TODO fix this, this is suppose to be run in a threadpool, right now submit is just
-    // directly invoked
     if (msg.command != null) {
-      // TODO the bug is that you create a new SessionState object for each Driver
       remoteDriver.submit(() -> {
         es.submit(() -> {
-          RemoteProcessDriverExecutor remoteProcessDriverExecutor = remoteProcessDriverExecutorFactory.createRemoteProcessDriverExecutor(
-                  msg.command, msg.hiveConfBytes, msg.queryId);
+          RemoteProcessDriverExecutor remoteProcessDriverExecutor = remoteProcessDriverExecutorFactory.createRemoteProcessDriverExecutor(msg.hiveConfBytes);
           commands.put(msg.queryId, remoteProcessDriverExecutor);
           Exception commandProcessorResponse = remoteProcessDriverExecutor.run(msg.command);
           remoteDriver.clientRpc.call(new CommandProcessorResponseMessage(msg
@@ -147,16 +144,15 @@ class DriverProtocol extends BaseProtocol {
   private void handle(ChannelHandlerContext ctx, CompileCommand msg) {
     LOG.debug("Received client compile command request");
 
-   remoteDriver.submit(() -> {
-     es.submit(() -> {
-       RemoteProcessDriverExecutor remoteProcessDriverExecutor = remoteProcessDriverExecutorFactory.createRemoteProcessDriverExecutor(
-               msg.command, msg.hiveConfBytes, msg.queryId);
-       commands.put(msg.queryId, remoteProcessDriverExecutor);
-       Exception commandProcessorResponse = remoteProcessDriverExecutor.compileAndRespond(msg
-               .command);
-       remoteDriver.clientRpc.call(new CommandProcessorResponseMessage(msg
-                  .queryId, commandProcessorResponse));
-     });
+    remoteDriver.submit(() -> {
+      es.submit(() -> {
+        RemoteProcessDriverExecutor remoteProcessDriverExecutor = remoteProcessDriverExecutorFactory.createRemoteProcessDriverExecutor(msg.hiveConfBytes);
+        commands.put(msg.queryId, remoteProcessDriverExecutor);
+        Exception commandProcessorResponse = remoteProcessDriverExecutor.compileAndRespond(msg
+                .command);
+        remoteDriver.clientRpc.call(new CommandProcessorResponseMessage(msg
+                .queryId, commandProcessorResponse));
+      });
     });
   }
 
@@ -170,7 +166,6 @@ class DriverProtocol extends BaseProtocol {
           boolean moreResults = commands.get(msg.queryId).getResults(res);
           remoteDriver.clientRpc.call(new CommandResults(res, msg.queryId, moreResults));
         } catch (IOException e) {
-          // TODO how are exceptions handled?
           throw new RuntimeException(e);
         }
       });
@@ -179,6 +174,7 @@ class DriverProtocol extends BaseProtocol {
 
   private void handle(ChannelHandlerContext ctx, HasResultSet msg) {
     LOG.debug("Received has result set request for query id " + msg.queryId);
+
     remoteDriver.submit(() -> {
       es.submit(() -> {
         boolean res = commands.get(msg.queryId).hasResultSet();
@@ -188,7 +184,8 @@ class DriverProtocol extends BaseProtocol {
   }
 
   private void handle(ChannelHandlerContext ctx, GetSchema msg) {
-    LOG.debug("Received has result set request for query id " + msg.queryId);
+    LOG.debug("Received has get schema request for query id " + msg.queryId);
+
     remoteDriver.submit(() -> {
       es.submit(() -> {
         byte[] res = commands.get(msg.queryId).getSchema();
@@ -198,7 +195,8 @@ class DriverProtocol extends BaseProtocol {
   }
 
   private void handle(ChannelHandlerContext ctx, IsFetchingTable msg) {
-    LOG.debug("Received has result set request for query id " + msg.queryId);
+    LOG.debug("Received is fetching table request for query id " + msg.queryId);
+
     remoteDriver.submit(() -> {
       es.submit(() -> {
         boolean res = commands.get(msg.queryId).isFetchingTable();
@@ -209,6 +207,7 @@ class DriverProtocol extends BaseProtocol {
 
   private void handle(ChannelHandlerContext ctx, CloseDriverRequest msg) {
     LOG.debug("Received has close driver request for query id " + msg.queryId);
+
     remoteDriver.submit(() -> {
       es.submit(() -> {
         commands.get(msg.queryId).close();
@@ -217,7 +216,8 @@ class DriverProtocol extends BaseProtocol {
   }
 
   private void handle(ChannelHandlerContext ctx, DestroyDriverRequest msg) {
-    LOG.debug("Received has close driver request for query id " + msg.queryId);
+    LOG.debug("Received has destroy driver request for query id " + msg.queryId);
+
     remoteDriver.submit(() -> {
       es.submit(() -> {
         commands.get(msg.queryId).destroy();
@@ -225,11 +225,23 @@ class DriverProtocol extends BaseProtocol {
     });
   }
 
-  private RemoteProcessDriverExecutorFactory createRemoteProcessDriverExecutorFactory() {
+  private void handle(ChannelHandlerContext ctx, StartSession msg) {
+    LOG.debug("Received start session request");
+
+    remoteDriver.submit(() -> {
+      es.submit(() -> {
+        this.remoteProcessDriverExecutorFactory = createRemoteProcessDriverExecutorFactory(msg.hiveConfBytes);
+      });
+    });
+  }
+
+  private RemoteProcessDriverExecutorFactory createRemoteProcessDriverExecutorFactory(byte[] hiveConfBytes) {
     try {
       return (RemoteProcessDriverExecutorFactory) Class.forName("org.apache.hadoop.hive.ql.exec" +
-              ".spark.RemoteProcessDriverExecutorFactoryImpl").newInstance();
-    } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
+              ".spark.RemoteProcessDriverExecutorFactoryImpl").getConstructor(byte[].class)
+              .newInstance(hiveConfBytes);
+    } catch (ClassNotFoundException | IllegalAccessException | InstantiationException |
+            NoSuchMethodException | InvocationTargetException e) {
       throw new RuntimeException(e);
     }
   }
