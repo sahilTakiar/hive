@@ -65,7 +65,7 @@ public final class CommandProcessorFactory {
       availableCommands.add(availableCommand.toLowerCase().trim());
     }
     if (!availableCommands.contains(cmd[0].trim().toLowerCase())) {
-      throw new SQLException("Insufficient privileges to run " + cmd[0], "42000");
+      throw new SQLException("Insufficient privileges to execute " + cmd[0], "42000");
     }
     if (cmd.length > 1 && "reload".equalsIgnoreCase(cmd[0])
       && "function".equalsIgnoreCase(cmd[1])) {

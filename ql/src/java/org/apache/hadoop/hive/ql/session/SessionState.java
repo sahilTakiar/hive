@@ -17,7 +17,6 @@
  */
 
 package org.apache.hadoop.hive.ql.session;
-
 import static org.apache.hadoop.hive.metastore.Warehouse.DEFAULT_DATABASE_NAME;
 
 import java.io.Closeable;
@@ -44,7 +43,6 @@ import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.lang.StringUtils;
@@ -114,7 +112,6 @@ import com.google.common.collect.Maps;
  * configuration information
  */
 public class SessionState {
-
   private static final Logger LOG = LoggerFactory.getLogger(SessionState.class);
 
   private static final String TMP_PREFIX = "_tmp_space.db";
@@ -1845,9 +1842,7 @@ public class SessionState {
   public void closeSparkSession() {
     if (sparkSession != null) {
       try {
-        getPerfLogger().PerfLogBegin("CLOSEING SPARK SESSION", "close()");
         SparkSessionManagerImpl.getInstance().closeSession(sparkSession);
-        getPerfLogger().PerfLogEnd("CLOSEING SPARK SESSION", "close()");
       } catch (Exception ex) {
         LOG.error("Error closing spark session.", ex);
       } finally {

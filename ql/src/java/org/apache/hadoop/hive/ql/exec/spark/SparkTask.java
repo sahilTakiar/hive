@@ -36,6 +36,7 @@ import org.apache.hadoop.hive.common.metrics.common.Metrics;
 import org.apache.hadoop.hive.common.metrics.common.MetricsConstant;
 import org.apache.hadoop.hive.ql.exec.spark.Statistic.SparkStatisticsNames;
 import org.apache.hadoop.hive.ql.exec.spark.session.SparkSessionWorkSubmitter;
+import org.apache.hadoop.hive.ql.exec.spark.session.SparkWorkSubmitter;
 import org.apache.hadoop.hive.ql.exec.spark.session.SparkWorkSubmitterFactory;
 import org.apache.hadoop.hive.ql.exec.spark.status.impl.SparkMetricsUtils;
 
@@ -114,12 +115,9 @@ public class SparkTask extends Task<SparkWork> {
 
     int rc = 0;
     perfLogger = SessionState.getPerfLogger();
-//    SparkSession sparkSession = null;
-//    SparkSessionManager sparkSessionManager = null;
+    SparkWorkSubmitter workSubmitter = null;
     try {
       printConfigInfo();
-//      sparkSessionManager = SparkSessionManagerImpl.getInstance();
-//      sparkSession = SparkUtilities.getSparkSession(conf, sparkSessionManager);
 
       SparkWork sparkWork = getWork();
       sparkWork.setRequiredCounterPrefix(getOperatorCounters());
@@ -127,7 +125,8 @@ public class SparkTask extends Task<SparkWork> {
       // Submit the Spark job
       perfLogger.PerfLogBegin(CLASS_NAME, PerfLogger.SPARK_SUBMIT_JOB);
       submitTime = perfLogger.getStartTime(PerfLogger.SPARK_SUBMIT_JOB);
-      jobRef = SparkWorkSubmitterFactory.getSparkWorkSubmitter(conf).submit(driverContext, sparkWork);
+      workSubmitter = SparkWorkSubmitterFactory.getSparkWorkSubmitter(conf);
+      jobRef = workSubmitter.submit(driverContext, sparkWork);
       perfLogger.PerfLogEnd(CLASS_NAME, PerfLogger.SPARK_SUBMIT_JOB);
 
       // If the driver context has been shutdown (due to query cancellation) kill the Spark job
@@ -191,7 +190,7 @@ public class SparkTask extends Task<SparkWork> {
       }
       sparkJobStatus.cleanup();
     } catch (Exception e) {
-      String msg = "Failed to run Spark task " + getId() + ", with exception '" + Utilities.getNameMessage(e) + "'";
+      String msg = "Failed to execute Spark task " + getId() + ", with exception '" + Utilities.getNameMessage(e) + "'";
 
       // Has to use full name to make sure it does not conflict with
       // org.apache.commons.lang.StringUtils
@@ -215,16 +214,9 @@ public class SparkTask extends Task<SparkWork> {
       }
       finishTime = perfLogger.getEndTime(PerfLogger.SPARK_RUN_JOB);
       Utilities.clearWork(conf);
-      // TODO add this back in - doesn't make sense to do this with a remote process driver so
-      // need to factor this out
-//      if (sparkSession != null && sparkSessionManager != null) {
-        rc = close(rc);
-//        try {
-//          sparkSessionManager.returnSession(sparkSession);
-//        } catch (HiveException ex) {
-//          LOG.error("Failed to return the session to SessionManager", ex);
-//        }
-//      }
+      if (workSubmitter != null) {
+        rc = workSubmitter.close(this, rc);
+      }
     }
     return rc;
   }
@@ -359,7 +351,7 @@ public class SparkTask extends Task<SparkWork> {
    * Close will move the temp files into the right place for the fetch
    * task. If the job has failed it will clean up the files.
    */
-  private int close(int rc) {
+  public int close(int rc) {
     try {
       List<BaseWork> ws = work.getAllWork();
       for (BaseWork w: ws) {
@@ -368,7 +360,7 @@ public class SparkTask extends Task<SparkWork> {
         }
       }
     } catch (Exception e) {
-      // jobClose needs to run successfully otherwise fail task
+      // jobClose needs to execute successfully otherwise fail task
       if (rc == 0) {
         rc = 3;
         String mesg = "Job Commit failed with exception '"

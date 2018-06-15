@@ -1352,7 +1352,6 @@ public class FileSinkOperator extends TerminalOperator<FileSinkDesc> implements
   @Override
   public void jobCloseOp(Configuration hconf, boolean success)
       throws HiveException {
-    LOG.info("CALLING JOB CLOSE OP ON FSOP");
     try {
       if ((conf != null) && isNativeTable()) {
         Path specPath = conf.getDirName();

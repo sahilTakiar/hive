@@ -23,7 +23,6 @@ import java.io.Serializable;
 import org.apache.hadoop.hive.ql.DriverContext;
 import org.apache.hadoop.hive.ql.exec.spark.status.SparkJobRef;
 import org.apache.hadoop.hive.ql.plan.SparkWork;
-import org.apache.hive.spark.client.SparkClient;
 import org.apache.spark.SparkConf;
 
 public interface HiveSparkClient extends Serializable, Closeable {

@@ -18,7 +18,6 @@
 package org.apache.hadoop.hive.ql.exec.spark.session;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
@@ -33,8 +32,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hive.ql.ErrorMsg;
-import org.apache.hadoop.hive.ql.exec.spark.HiveSparkClientFactory;
-import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.session.SessionState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +39,7 @@ import org.apache.hadoop.hive.common.ObjectPair;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.DriverContext;
 import org.apache.hadoop.hive.ql.exec.spark.HiveSparkClient;
+import org.apache.hadoop.hive.ql.exec.spark.HiveSparkClientFactory;
 import org.apache.hadoop.hive.ql.exec.spark.status.SparkJobRef;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.SparkWork;
@@ -104,19 +102,6 @@ public class SparkSessionImpl implements SparkSession {
     Preconditions.checkState(isOpen, "Hive on Spark session is not open. Can't submit jobs.");
     return hiveSparkClient.execute(driverContext, sparkWork);
   }
-
-//  @Override
-//  public CommandProcessorResponse submit(String statement) throws Exception {
-//    // TODO - just create a RemoteClient and submit job through there
-//    LOG.info("SUBMITTING STATEMENT " + statement);
-//    hiveSparkClient = HiveSparkClientFactory.createHiveSparkClient(hiveSparkAppClient);
-//    return hiveSparkClient.run(statement);
-//  }
-//
-//  @Override
-//  public boolean getResults(List res) throws IOException {
-//    return hiveSparkClient.getResults(res);
-//  }
 
   @Override
   public ObjectPair<Long, Integer> getMemoryAndCores() throws Exception {
@@ -273,7 +258,7 @@ public class SparkSessionImpl implements SparkSession {
     return scratchDir;
   }
 
-  public static String makeSessionId() {
+  private static String makeSessionId() {
     return UUID.randomUUID().toString();
   }
 

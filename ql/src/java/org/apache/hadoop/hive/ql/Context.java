@@ -371,7 +371,7 @@ public class Context {
   }
 
   /**
-   * Find whether we should run the current query due to explain
+   * Find whether we should execute the current query due to explain
    * @return true if the query needs to be executed, false if not
    */
   public boolean isExplainSkipExecution() {

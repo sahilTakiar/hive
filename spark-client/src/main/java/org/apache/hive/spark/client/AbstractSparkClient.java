@@ -176,9 +176,7 @@ abstract class AbstractSparkClient implements SparkClient {
     }
 
     try {
-      LOG.info("WAITING FOR DRIVER FUTURE TO SHUTDOWN");
       driverFuture.get(DEFAULT_SHUTDOWN_TIMEOUT, TimeUnit.MILLISECONDS);
-      LOG.info("DONE WAITING FOR DRIVER FUTURE TO SHUTDOWN");
     } catch (ExecutionException e) {
       LOG.error("Exception while waiting for driver future to complete", e);
     } catch (TimeoutException e) {
@@ -408,11 +406,6 @@ abstract class AbstractSparkClient implements SparkClient {
 
     return launchDriver(isTesting, rpcServer, clientId);
   }
-
-//  @Override
-//  public ClientProtocol getClientProtocol() {
-//    return this.protocol;
-//  }
 
   protected abstract Future<Void> launchDriver(String isTesting, RpcServer rpcServer, String
           clientId) throws IOException;

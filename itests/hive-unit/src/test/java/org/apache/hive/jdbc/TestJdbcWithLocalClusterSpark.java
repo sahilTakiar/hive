@@ -71,7 +71,7 @@ public class TestJdbcWithLocalClusterSpark {
     HiveConf conf = new HiveConf();
     conf.set("hive.execution.engine", "spark");
     conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
-    conf.set("spark.master", "local[*]");
+    conf.set("spark.master", "local-cluster[2,2,1024]");
     conf.set("hive.spark.client.connect.timeout", "30000ms");
     // FIXME: Hadoop3 made the incompatible change for dfs.client.datanode-restart.timeout
     // while spark2 is still using Hadoop2.
@@ -80,8 +80,6 @@ public class TestJdbcWithLocalClusterSpark {
     conf.set("dfs.client.datanode-restart.timeout", "30");
     conf.set("spark.local.dir", Paths.get(System.getProperty("test.tmp.dir"),
             "TestJdbcWithLocalClusterSpark-local-dir").toString());
-//    conf.set("spark.driver.extraJavaOptions", "-agentlib:jdwp=transport=dt_socket,server=y," +
-//            "address=8000,suspend=n");
     return conf;
   }
 
@@ -96,7 +94,6 @@ public class TestJdbcWithLocalClusterSpark {
     DriverManager.setLoginTimeout(0);
     conf.setBoolVar(ConfVars.HIVE_SUPPORT_CONCURRENCY, false);
     miniHS2 = new MiniHS2.Builder().withRemoteMetastore().withConf(conf).withMiniMR().build();
-    // new MiniHS2(conf, MiniClusterType.MR);
     Map<String, String> overlayProps = new HashMap<String, String>();
     overlayProps.put(ConfVars.HIVE_SERVER2_SESSION_HOOK.varname,
         LocalClusterSparkSessionHook.class.getName());

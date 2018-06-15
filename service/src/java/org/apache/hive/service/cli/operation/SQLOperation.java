@@ -190,7 +190,7 @@ public class SQLOperation extends ExecuteStatementOperation {
       driver.setOperationId(guid64);
 
       // In Hive server mode, we are not able to retry in the FetchTask
-      // case, when calling fetch queries since run() has returned.
+      // case, when calling fetch queries since execute() has returned.
       // For now, we disable the test attempts.
       response = driver.compileAndRespond(statement);
       if (0 != response.getResponseCode()) {
@@ -217,7 +217,7 @@ public class SQLOperation extends ExecuteStatementOperation {
         return;
       }
       // In Hive server mode, we are not able to retry in the FetchTask
-      // case, when calling fetch queries since run() has returned.
+      // case, when calling fetch queries since execute() has returned.
       // For now, we disable the test attempts.
       response = driver.run();
       if (0 != response.getResponseCode()) {
@@ -250,10 +250,10 @@ public class SQLOperation extends ExecuteStatementOperation {
   public void runInternal() throws HiveSQLException {
     setState(OperationState.PENDING);
 
-    boolean runAsync = shouldRunAsync(); // this is true when coming from JDBC
+    boolean runAsync = shouldRunAsync();
     final boolean asyncPrepare = runAsync
       && HiveConf.getBoolVar(queryState.getConf(),
-        HiveConf.ConfVars.HIVE_SERVER2_ASYNC_EXEC_ASYNC_COMPILE); // this is false
+        HiveConf.ConfVars.HIVE_SERVER2_ASYNC_EXEC_ASYNC_COMPILE);
     if (!asyncPrepare) {
       prepare(queryState);
     }

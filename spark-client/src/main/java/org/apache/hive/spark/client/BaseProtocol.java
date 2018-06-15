@@ -109,7 +109,7 @@ public abstract class BaseProtocol extends RpcDispatcher {
 
   public static class JobRequest<T extends Serializable> implements Serializable {
 
-    public final String id;
+    final String id;
     final Job<T> job;
 
     JobRequest(String id, Job<T> job) {

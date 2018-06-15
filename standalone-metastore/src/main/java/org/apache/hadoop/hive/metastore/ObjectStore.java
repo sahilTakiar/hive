@@ -355,7 +355,6 @@ public class ObjectStore implements RawStore, Configurable {
           clearOutPmfClassLoaderCache(pmf);
           if (!forTwoMetastoreTesting) {
             // close the underlying connection pool to avoid leaks
-            LOG.info("CLOSING PMF FACTORY");
             pmf.close();
           }
         }

@@ -305,9 +305,7 @@ public class RemoteHiveSparkClient implements HiveSparkClient {
   @Override
   public void close() {
     if (remoteClient != null) {
-      SessionState.getPerfLogger().PerfLogBegin("RemoteHiveSparkClient", "remoteClient.close()");
       remoteClient.stop();
-      SessionState.getPerfLogger().PerfLogEnd("RemoteHiveSparkClient", "remoteClient.close()");
     }
     localFiles.clear();
     localJars.clear();

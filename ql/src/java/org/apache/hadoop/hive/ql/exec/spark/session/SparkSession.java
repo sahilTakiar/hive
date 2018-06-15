@@ -25,10 +25,8 @@ import org.apache.hadoop.hive.ql.exec.spark.HiveSparkClient;
 import org.apache.hadoop.hive.ql.exec.spark.status.SparkJobRef;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.SparkWork;
-import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 
 import java.io.IOException;
-import java.util.List;
 
 public interface SparkSession {
   /**

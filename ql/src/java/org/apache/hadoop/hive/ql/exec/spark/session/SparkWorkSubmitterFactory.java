@@ -6,7 +6,7 @@ public class SparkWorkSubmitterFactory {
 
   public static SparkWorkSubmitter getSparkWorkSubmitter(HiveConf hiveConf) {
     if (hiveConf.getBoolVar(HiveConf.ConfVars.HIVE_SERVER2_ENABLE_CONTAINER_SERVICE)) {
-      return new SparkLocalClientWorkSubmitter(hiveConf);
+      return new SparkLocalClientWorkSubmitter();
     } else {
       return new SparkSessionWorkSubmitter(hiveConf);
     }

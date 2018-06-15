@@ -23,7 +23,7 @@ import org.apache.hive.spark.counter.SparkCounters;
 
 import org.apache.spark.api.java.JavaFutureAction;
 
-public interface MonitorCallback {
+interface MonitorCallback {
 
   void call(JavaFutureAction<?> future, SparkCounters sparkCounters, Set<Integer> cachedRDDIds);
 

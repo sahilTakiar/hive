@@ -142,7 +142,7 @@ public class RemoteDriver {
             .setNameFormat("Spark-Driver-RPC-Handler-%d")
             .setDaemon(true)
             .build());
-    this.protocol = DriverProtocolFactory.getDriverProtocol(mapConf, this);
+    this.protocol = new DriverProtocol(this);
 
     // The RPC library takes care of timing out this.
     this.clientRpc = Rpc.createClient(mapConf, egroup, serverAddress, serverPort,

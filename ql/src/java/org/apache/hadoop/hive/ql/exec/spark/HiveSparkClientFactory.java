@@ -68,7 +68,7 @@ public class HiveSparkClientFactory {
     // Submit spark job through local spark context while spark master is local mode, otherwise submit
     // spark job through remote spark context.
     String master = sparkConf.get("spark.master");
-    if (master.equals("local")) { //|| master.startsWith("local[")) {
+    if (master.equals("local") || master.startsWith("local[")) {
       // With local spark context, all user sessions share the same spark context.
       return LocalHiveSparkClient.getInstance(generateSparkConf(sparkConf), hiveconf);
     } else {
@@ -236,7 +236,7 @@ public class HiveSparkClientFactory {
 
 
     // Set the credential provider passwords if found, if there is job specific password
-    // the credential provider location is set directly in the run method of LocalSparkClient
+    // the credential provider location is set directly in the execute method of LocalSparkClient
     // and submit method of RemoteHiveSparkClient when the job config is created
     String password = HiveConfUtil.getJobCredentialProviderPassword(hiveConf);
     if(password != null) {
