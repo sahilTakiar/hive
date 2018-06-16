@@ -20,7 +20,6 @@ package org.apache.hive.service.cli.operation;
 import java.sql.SQLException;
 import java.util.Map;
 
-import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.processors.CommandProcessor;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorFactory;
 import org.apache.hive.common.util.HiveStringUtils;
