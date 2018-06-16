@@ -22,4 +22,6 @@ public interface RemoteProcessDriverExecutor {
   void close();
 
   void destroy();
+
+  byte[] getQueryDisplay();
 }

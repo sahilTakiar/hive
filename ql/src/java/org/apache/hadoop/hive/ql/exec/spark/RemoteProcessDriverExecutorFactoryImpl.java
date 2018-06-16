@@ -78,5 +78,10 @@ public class RemoteProcessDriverExecutorFactoryImpl implements RemoteProcessDriv
     public void destroy() {
       this.driver.destroy();
     }
+
+    @Override
+    public byte[] getQueryDisplay() {
+      return KryoSerializer.serialize(this.driver.getQueryDisplay());
+    }
   }
 }

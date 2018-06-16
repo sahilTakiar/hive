@@ -1,6 +1,7 @@
 package org.apache.hadoop.hive.ql.exec.spark;
 
 import org.apache.hadoop.hive.metastore.api.Schema;
+import org.apache.hadoop.hive.ql.QueryDisplay;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hive.spark.client.ClientProtocol;
 import org.slf4j.Logger;
@@ -28,9 +29,7 @@ public class RemoteProcessHiveSparkClientImpl implements RemoteProcessHiveSparkC
 
   @Override
   public boolean getResults(List res) throws IOException {
-    boolean result = this.clientProtocol.getResults(this.queryId, res);
-    LOG.info("GOT RESULTS " + res);
-    return result;
+    return this.clientProtocol.getResults(this.queryId, res);
   }
 
   @Override
@@ -66,5 +65,11 @@ public class RemoteProcessHiveSparkClientImpl implements RemoteProcessHiveSparkC
   @Override
   public void destroy() {
     this.clientProtocol.destroyDriver(this.queryId);
+  }
+
+  @Override
+  public QueryDisplay getQueryDisplay() {
+    return KryoSerializer.deserialize(this.clientProtocol.getQueryDisplay(this.queryId),
+            QueryDisplay.class);
   }
 }

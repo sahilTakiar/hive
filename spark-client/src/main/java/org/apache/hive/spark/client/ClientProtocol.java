@@ -182,6 +182,11 @@ public class ClientProtocol extends BaseProtocol {
     sparkClient.getDriverRpc().call(new DestroyDriverRequest(queryId));
   }
 
+  public byte[] getQueryDisplay(String queryId) {
+    LOG.debug("Sending getQueryDisplay request for queryId " + queryId);
+    return sendMessage(queryId, new GetQueryDisplayRequest(queryId));
+  }
+
    /**
    * Sends a message to the {@link RemoteDriver} via the Driver
    * {@link org.apache.hive.spark.client.rpc.Rpc} and blocks until the results are received by

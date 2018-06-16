@@ -1,6 +1,7 @@
 package org.apache.hadoop.hive.ql.exec.spark;
 
 import org.apache.hadoop.hive.metastore.api.Schema;
+import org.apache.hadoop.hive.ql.QueryDisplay;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 
 import java.io.IOException;
@@ -26,4 +27,6 @@ public interface RemoteProcessHiveSparkClient extends Serializable {
   void close();
 
   void destroy();
+
+  QueryDisplay getQueryDisplay();
 }

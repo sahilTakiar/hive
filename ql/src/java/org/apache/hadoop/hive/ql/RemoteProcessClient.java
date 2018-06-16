@@ -25,4 +25,6 @@ interface RemoteProcessClient {
   void close();
 
   void destroy();
+
+  QueryDisplay getQueryDisplay();
 }

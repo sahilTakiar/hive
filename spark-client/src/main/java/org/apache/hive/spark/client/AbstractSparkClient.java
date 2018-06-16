@@ -316,6 +316,11 @@ abstract class AbstractSparkClient implements SparkClient {
       addDriverSystemProperty("test.tmp.dir.uri", testTmpDirUri);
     }
 
+    String testSrcTables = System.getProperty("test.src.tables");
+    if (testSrcTables != null) {
+      addDriverSystemProperty("test.src.tables", testSrcTables);
+    }
+
     Writer writer = new OutputStreamWriter(new FileOutputStream(properties), Charsets.UTF_8);
     try {
       allProps.store(writer, "Spark Context configuration");

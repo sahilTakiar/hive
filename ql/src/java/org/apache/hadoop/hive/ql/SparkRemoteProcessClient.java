@@ -81,4 +81,9 @@ public class SparkRemoteProcessClient implements RemoteProcessClient {
   public void destroy() {
     this.hiveSparkClient.destroy();
   }
+
+  @Override
+  public QueryDisplay getQueryDisplay() {
+    return this.hiveSparkClient.getQueryDisplay();
+  }
 }

@@ -56,7 +56,12 @@ public class RemoteProcessDriver implements IDriver {
 
   @Override
   public QueryDisplay getQueryDisplay() {
-    return null;
+    return new QueryDisplay() {
+      @Override
+      public synchronized List<TaskDisplay> getTaskDisplays() {
+        return null;
+      }
+    };
   }
 
   @Override

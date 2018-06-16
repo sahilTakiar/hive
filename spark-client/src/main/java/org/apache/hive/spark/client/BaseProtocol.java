@@ -291,6 +291,15 @@ public abstract class BaseProtocol extends RpcDispatcher {
     }
   }
 
+  protected static class GetQueryDisplayRequest implements Serializable {
+
+    final String queryId;
+
+    GetQueryDisplayRequest(String queryId) {
+      this.queryId = queryId;
+    }
+  }
+
   protected static class GetSchemaResponse implements Serializable {
 
     final String queryId;
@@ -321,6 +330,17 @@ public abstract class BaseProtocol extends RpcDispatcher {
     IsFetchingTableResponse(String queryId, boolean isFetchingTableResponse) {
       this.queryId = queryId;
       this.isFetchingTableResponse = isFetchingTableResponse;
+    }
+  }
+
+  protected static class QueryDisplayResponse implements Serializable {
+
+    final String queryId;
+    final byte[] res;
+
+    QueryDisplayResponse(String queryId, byte[] res) {
+      this.queryId = queryId;
+      this.res = res;
     }
   }
 

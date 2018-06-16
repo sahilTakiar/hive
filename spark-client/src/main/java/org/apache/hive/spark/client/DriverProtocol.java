@@ -215,6 +215,17 @@ class DriverProtocol extends BaseProtocol {
     });
   }
 
+  private void handle(ChannelHandlerContext ctx, GetQueryDisplayRequest msg) {
+    LOG.debug("Received has getQueryDisplay request for query id " + msg.queryId);
+
+    remoteDriver.submit(() -> {
+      es.submit(() -> {
+        byte[] res = commands.get(msg.queryId).getQueryDisplay();
+        remoteDriver.clientRpc.call(new QueryDisplayResponse(msg.queryId, res));
+      });
+    });
+  }
+
   private void handle(ChannelHandlerContext ctx, DestroyDriverRequest msg) {
     LOG.debug("Received has destroy driver request for query id " + msg.queryId);
 
