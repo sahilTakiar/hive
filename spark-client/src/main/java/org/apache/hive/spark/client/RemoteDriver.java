@@ -567,7 +567,7 @@ public class RemoteDriver {
           future.get();
           completed++;
           LOG.debug("Client job {}: {} of {} Spark jobs finished.",
-                  req.id, completed, jobs.size());
+              req.id, completed, jobs.size());
         }
 
         // If the job is not empty (but runs fast), we have to wait until all the TaskEnd/JobEnd
@@ -634,7 +634,7 @@ public class RemoteDriver {
     }
 
     private void monitorJob(JavaFutureAction<?> job,
-                            SparkCounters sparkCounters, Set<Integer> cachedRDDIds) {
+        SparkCounters sparkCounters, Set<Integer> cachedRDDIds) {
       jobs.add(job);
       if (!jc.getMonitoredJobs().containsKey(req.id)) {
         jc.getMonitoredJobs().put(req.id, new CopyOnWriteArrayList<JavaFutureAction<?>>());

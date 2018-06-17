@@ -107,7 +107,7 @@ public abstract class BaseProtocol extends RpcDispatcher {
     }
   }
 
-  public static class JobRequest<T extends Serializable> implements Serializable {
+  protected static class JobRequest<T extends Serializable> implements Serializable {
 
     final String id;
     final Job<T> job;

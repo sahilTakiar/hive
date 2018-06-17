@@ -3,21 +3,18 @@ package org.apache.hadoop.hive.ql.exec.spark;
 import org.apache.hadoop.hive.metastore.api.Schema;
 import org.apache.hadoop.hive.ql.QueryDisplay;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
-import org.apache.hive.spark.client.ClientProtocol;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hive.spark.client.AbstractSparkClient;
 
-import java.io.IOException;
 import java.util.List;
 
 public class RemoteProcessHiveSparkClientImpl implements RemoteProcessHiveSparkClient {
 
-  private static final Logger LOG = LoggerFactory.getLogger(RemoteProcessHiveSparkClientImpl.class);
 
   private final String queryId;
-  private final ClientProtocol clientProtocol;
+  private final AbstractSparkClient.ClientProtocol clientProtocol;
 
-  public RemoteProcessHiveSparkClientImpl(String queryId, ClientProtocol clientProtocol) {
+  public RemoteProcessHiveSparkClientImpl(String queryId,
+                                          AbstractSparkClient.ClientProtocol clientProtocol) {
     this.queryId = queryId;
     this.clientProtocol = clientProtocol;
   }
@@ -28,13 +25,14 @@ public class RemoteProcessHiveSparkClientImpl implements RemoteProcessHiveSparkC
   }
 
   @Override
-  public boolean getResults(List res) throws IOException {
+  public boolean getResults(List res) {
     return this.clientProtocol.getResults(this.queryId, res);
   }
 
   @Override
   public CommandProcessorResponse compileAndRespond(String statement, byte[] hiveConfBytes) {
-    return (CommandProcessorResponse) this.clientProtocol.compileAndRespond(this.queryId, statement, hiveConfBytes);
+    return (CommandProcessorResponse) this.clientProtocol.compileAndRespond(this.queryId, statement,
+            hiveConfBytes);
   }
 
   @Override
