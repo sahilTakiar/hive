@@ -99,6 +99,7 @@ public class TestMultiSessionsHS2WithLocalClusterSparkAndRemoteProcessDriver {
     conf.set("spark.local.dir", Paths.get(System.getProperty("test.tmp.dir"),
             "TestMultiSessionsHS2WithLocalClusterSpark-local-dir").toString());
     conf.set("hive.security.authorization.manager", "org.apache.hadoop.hive.ql.security.authorization.plugin.sqlstd.SQLStdHiveAuthorizerFactory");
+    conf.set("hive.server2.enable.container.service", "true");
     return conf;
   }
 

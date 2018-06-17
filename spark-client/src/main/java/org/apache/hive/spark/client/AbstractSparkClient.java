@@ -233,11 +233,6 @@ public abstract class AbstractSparkClient implements SparkClient {
     return this.protocol;
   }
 
-  @Override
-  public Rpc getDriverRpc() {
-    return this.driverRpc;
-  }
-
   private Future<Void> startDriver(final RpcServer rpcServer, final String clientId,
                                    final String secret) throws IOException {
     final String serverAddress = rpcServer.getAddress();

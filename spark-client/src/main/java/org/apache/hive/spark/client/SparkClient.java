@@ -119,7 +119,10 @@ public interface SparkClient extends Serializable {
    */
   void cancel(String jobId);
 
+  /**
+   * Returns the client protocol associated with this client. The client protocol is an extension
+   * of {@link org.apache.hive.spark.client.rpc.RpcDispatcher} and defines the client side
+   * protocol for interacting with the {@link RemoteDriver}.
+   */
   AbstractSparkClient.ClientProtocol getClientProtocol();
-
-  Rpc getDriverRpc();
 }
