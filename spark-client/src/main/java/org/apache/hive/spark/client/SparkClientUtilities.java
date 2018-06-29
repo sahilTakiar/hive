@@ -48,6 +48,7 @@ public class SparkClientUtilities {
   private static final Map<String, Long> downloadedFiles = new ConcurrentHashMap<>();
 
   public static final String HIVE_KRYO_REG_NAME = "org.apache.hive.spark.HiveKryoRegistrator";
+  public static final String HIVE_KRYO_NO_HASH_CODE_REG_NAME = "org.apache.hive.spark.HiveKryoNoHashCodeRegistrator";
   private static final String HIVE_KRYO_REG_JAR_NAME = "hive-kryo-registrator";
 
   /**

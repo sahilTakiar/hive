@@ -18,6 +18,7 @@
 package org.apache.hive.spark.client;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
+import static org.apache.hive.spark.client.SparkClientUtilities.HIVE_KRYO_NO_HASH_CODE_REG_NAME;
 import static org.apache.hive.spark.client.SparkClientUtilities.HIVE_KRYO_REG_NAME;
 
 import com.google.common.base.Charsets;
@@ -366,7 +367,7 @@ abstract class AbstractSparkClient implements SparkClient {
     }
 
     String regStr = conf.get("spark.kryo.registrator");
-    if (HIVE_KRYO_REG_NAME.equals(regStr)) {
+    if (HIVE_KRYO_REG_NAME.equals(regStr) || HIVE_KRYO_NO_HASH_CODE_REG_NAME.equals(regStr)) {
       addJars(SparkClientUtilities.findKryoRegistratorJar(hiveConf));
     }
 

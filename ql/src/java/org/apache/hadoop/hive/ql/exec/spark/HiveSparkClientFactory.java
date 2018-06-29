@@ -212,7 +212,13 @@ public class HiveSparkClientFactory {
       classes.add(HiveKey.class.getName());
       classes.add(BytesWritable.class.getName());
     } else {
-      sparkConf.put("spark.kryo.registrator", SparkClientUtilities.HIVE_KRYO_REG_NAME);
+      if (!hiveConf.getBoolVar(HiveConf.ConfVars.HIVE_COMBINE_EQUIVALENT_WORK_OPTIMIZATION) &&
+              !hiveConf.getBoolVar(HiveConf.ConfVars.SPARK_USE_GROUPBY_SHUFFLE)) {
+        sparkConf.put("spark.kryo.registrator",
+                SparkClientUtilities.HIVE_KRYO_NO_HASH_CODE_REG_NAME);
+      } else {
+        sparkConf.put("spark.kryo.registrator", SparkClientUtilities.HIVE_KRYO_REG_NAME);
+      }
     }
     sparkConf.put("spark.kryo.classesToRegister", Joiner.on(",").join(classes));
 

@@ -94,7 +94,8 @@ public class LocalHiveSparkClient implements HiveSparkClient {
     // the registrator jar should already be in CP when not in test mode
     if (HiveConf.getBoolVar(hiveConf, HiveConf.ConfVars.HIVE_IN_TEST)) {
       String kryoReg = sparkConf.get("spark.kryo.registrator", "");
-      if (SparkClientUtilities.HIVE_KRYO_REG_NAME.equals(kryoReg)) {
+      if (SparkClientUtilities.HIVE_KRYO_REG_NAME.equals(kryoReg) ||
+              SparkClientUtilities.HIVE_KRYO_NO_HASH_CODE_REG_NAME.equals(kryoReg)) {
         regJar = SparkClientUtilities.findKryoRegistratorJar(hiveConf);
         SparkClientUtilities.addJarToContextLoader(new File(regJar));
       }

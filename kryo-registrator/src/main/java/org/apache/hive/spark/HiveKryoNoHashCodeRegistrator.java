@@ -21,52 +21,36 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+
 import org.apache.hadoop.hive.ql.io.HiveKey;
 import org.apache.hadoop.io.BytesWritable;
+
 import org.apache.spark.serializer.KryoRegistrator;
 
+
 /**
- * Kryo registrator for shuffle data, i.e. HiveKey and BytesWritable.
- *
- * Active use (e.g. reflection to get a class instance) of this class on hive side can cause
- * problems because kryo is relocated in hive-exec.
+ * Similar to {@link HiveKryoRegistrator} except it does not serialize hash codes.
  */
-public class HiveKryoRegistrator implements KryoRegistrator {
+public class HiveKryoNoHashCodeRegistrator implements KryoRegistrator {
 
   @Override
   public void registerClasses(Kryo kryo) {
-    kryo.register(HiveKey.class, new HiveKeySerializer());
-    kryo.register(BytesWritable.class, new BytesWritableSerializer());
+    kryo.register(HiveKey.class, new HiveKeyNoHashCodeSerializer());
+    kryo.register(BytesWritable.class, new HiveKryoRegistrator.BytesWritableSerializer());
   }
 
-  static class HiveKeySerializer extends Serializer<HiveKey> {
+  static class HiveKeyNoHashCodeSerializer extends Serializer<HiveKey> {
 
     public void write(Kryo kryo, Output output, HiveKey object) {
       output.writeVarInt(object.getLength(), true);
       output.write(object.getBytes(), 0, object.getLength());
-      output.writeVarInt(object.hashCode(), false);
     }
 
     public HiveKey read(Kryo kryo, Input input, Class<HiveKey> type) {
       int len = input.readVarInt(true);
       byte[] bytes = new byte[len];
       input.readBytes(bytes);
-      return new HiveKey(bytes, input.readVarInt(false));
-    }
-  }
-
-  static class BytesWritableSerializer extends Serializer<BytesWritable> {
-
-    public void write(Kryo kryo, Output output, BytesWritable object) {
-      output.writeVarInt(object.getLength(), true);
-      output.write(object.getBytes(), 0, object.getLength());
-    }
-
-    public BytesWritable read(Kryo kryo, Input input, Class<BytesWritable> type) {
-      int len = input.readVarInt(true);
-      byte[] bytes = new byte[len];
-      input.readBytes(bytes);
-      return new BytesWritable(bytes);
+      return new HiveKey(bytes);
     }
   }
 }
